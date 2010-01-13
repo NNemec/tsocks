@@ -1,4 +1,9 @@
-version 1.80Beta4 - 2002.3.16 delius@progsoc.uts.edu.au
+version 1.80Beta5 - 2002.?.?? delius@progsoc.uts.edu.au
+   Intercept close() to fix problems with tsocks and 
+      kmail 
+   Add FAQ to distribution
+
+version 1.80Beta4 - 2002.3.17 delius@progsoc.uts.edu.au
    Allow TSOCKS_CONF_FILE to specify location of config
    If the config is not found, assume all local
    Now respects the default_user and pass specified for path

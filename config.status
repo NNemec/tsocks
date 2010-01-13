@@ -276,6 +276,9 @@ CEOF
 ${ac_dA}CONNECT_SOCKARG${ac_dB}CONNECT_SOCKARG${ac_dC}struct sockaddr_in *${ac_dD}
 ${ac_uA}CONNECT_SOCKARG${ac_uB}CONNECT_SOCKARG${ac_uC}struct sockaddr_in *${ac_uD}
 ${ac_eA}CONNECT_SOCKARG${ac_eB}CONNECT_SOCKARG${ac_eC}struct sockaddr_in *${ac_eD}
+${ac_dA}CLOSE_SIGNATURE${ac_dB}CLOSE_SIGNATURE${ac_dC}int fd${ac_dD}
+${ac_uA}CLOSE_SIGNATURE${ac_uB}CLOSE_SIGNATURE${ac_uC}int fd${ac_uD}
+${ac_eA}CLOSE_SIGNATURE${ac_eB}CLOSE_SIGNATURE${ac_eC}int fd${ac_eD}
 ${ac_dA}POLL_SIGNATURE${ac_dB}POLL_SIGNATURE${ac_dC}struct pollfd *ufds, unsigned long nfds, int timeout${ac_dD}
 ${ac_uA}POLL_SIGNATURE${ac_uB}POLL_SIGNATURE${ac_uC}struct pollfd *ufds, unsigned long nfds, int timeout${ac_uD}
 ${ac_eA}POLL_SIGNATURE${ac_eB}POLL_SIGNATURE${ac_eC}struct pollfd *ufds, unsigned long nfds, int timeout${ac_eD}

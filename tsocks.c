@@ -61,6 +61,7 @@ static int (*realresinit)(void);
 static int (*realconnect)(CONNECT_SIGNATURE);
 static int (*realselect)(SELECT_SIGNATURE);
 static int (*realpoll)(POLL_SIGNATURE);
+static int (*realclose)(CLOSE_SIGNATURE);
 static struct parsedfile *config;
 static struct connreq *requests = NULL;
 static int suid = 0;
@@ -71,6 +72,7 @@ void _init(void);
 int connect(CONNECT_SIGNATURE);
 int select(SELECT_SIGNATURE);
 int poll(POLL_SIGNATURE);
+int close(CLOSE_SIGNATURE);
 #ifdef USE_SOCKS_DNS
 int res_init(void);
 #endif
@@ -100,8 +102,7 @@ static int read_socksv5_auth(struct connreq *conn);
 
 void _init(void) {
 #ifdef USE_OLD_DLSYM
-	void *libconnect;
-   void *libselect;
+	void *lib;
 #endif
 
 	/* We could do all our initialization here, but to be honest */
@@ -115,18 +116,23 @@ void _init(void) {
 	realconnect = dlsym(RTLD_NEXT, "connect");
 	realselect = dlsym(RTLD_NEXT, "select");
 	realpoll = dlsym(RTLD_NEXT, "poll");
+	realclose = dlsym(RTLD_NEXT, "close");
 	#ifdef USE_SOCKS_DNS
 	realresinit = dlsym(RTLD_NEXT, "res_init");
 	#endif
 #else
-	libconnect = dlopen(LIBCONNECT, RTLD_LAZY);
-	realconnect = dlsym(libconnect, "connect");
-	realselect = dlsym(libconnect, "select");
-	realpoll = dlsym(libconnect, "poll");
+	lib = dlopen(LIBCONNECT, RTLD_LAZY);
+	realconnect = dlsym(lib, "connect");
+	realselect = dlsym(lib, "select");
+	realpoll = dlsym(lib, "poll");
 	#ifdef USE_SOCKS_DNS
-	realresinit = dlsym(libconnect, "res_init");
+	realresinit = dlsym(lib, "res_init");
 	#endif
-	dlclose(libconnect);	
+	dlclose(lib);	
+
+	lib = dlopen(LIBC, RTLD_LAZY);
+   realclose = dlsym(lib, "close");
+	dlclose(lib);	
 #endif
 }
 
@@ -141,13 +147,13 @@ static int get_environment() {
 
    /* Determine the logging level */
 #ifndef ALLOW_MSG_OUTPUT
-   set_log_options(-1, stderr);
+   set_log_options(-1, stderr, 0);
 #else
    if ((env = getenv("TSOCKS_DEBUG")))
       loglevel = atoi(env);
    if (((env = getenv("TSOCKS_DEBUG_FILE"))) && !suid)
       logfile = env;
-   set_log_options(loglevel, logfile);
+   set_log_options(loglevel, logfile, 1);
 #endif
 
    done = 1;
@@ -672,6 +678,31 @@ int poll(POLL_SIGNATURE) {
    return(nevents);
 }
 
+int close(CLOSE_SIGNATURE) {
+   int rc;
+   struct connreq *conn;
+
+	if (realclose == NULL) {
+		show_msg(MSGERR, "Unresolved symbol: close\n");
+		return(-1);
+	}
+
+   show_msg(MSGDEBUG, "Call to close(%d)\n", fd);
+
+   rc = realclose(fd);
+
+   /* If we have this fd in our request handling list we 
+    * remove it now */
+   if ((conn = find_socks_request(fd, 1))) {
+      show_msg(MSGDEBUG, "Call to close() received on file descriptor "
+                         "%d which is a connection request of status %d\n",
+               conn->sockid, conn->state);
+      kill_socks_request(conn);
+   }
+
+   return(rc);
+}
+
 static struct connreq *new_socks_request(int sockid, struct sockaddr_in *connaddr, 
                                          struct sockaddr_in *serveraddr, 
                                          struct serverent *path) {
@@ -816,8 +847,10 @@ static int connect_server(struct connreq *conn) {
 	/* Connect this socket to the socks server */
    show_msg(MSGDEBUG, "Connecting to %s port %d\n", 
             inet_ntoa(conn->serveraddr.sin_addr), ntohs(conn->serveraddr.sin_port));
+
    rc = realconnect(conn->sockid, (CONNECT_SOCKARG) &(conn->serveraddr),
                     sizeof(conn->serveraddr));
+
    show_msg(MSGDEBUG, "Connect returned %d, errno is %d\n", rc, errno); 
 	if (rc) {
       if (errno != EINPROGRESS) {

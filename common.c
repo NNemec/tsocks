@@ -12,6 +12,8 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
@@ -21,6 +23,7 @@ int loglevel = MSGERR;    /* The default logging level is to only log
 char logfilename[256];    /* Name of file to which log messages should
                              be redirected */
 FILE *logfile = NULL;     /* File to which messages should be logged */
+int logstamp = 0;         /* Timestamp (and pid stamp) messages */
 
 unsigned int resolve_ip(char *host, int showmsg, int allownames) {
 	struct hostent *new;
@@ -59,7 +62,9 @@ unsigned int resolve_ip(char *host, int showmsg, int allownames) {
 /*          messages entirely                                   */
 /*  filename - This is a filename to which the messages should  */
 /*             be logged instead of to standard error           */
-void set_log_options(int level, char *filename) {
+/*  timestamp - This indicates that messages should be prefixed */
+/*              with timestamps (and the process id)            */
+void set_log_options(int level, char *filename, int timestamp) {
 
    loglevel = level;
    if (loglevel < MSGERR)
@@ -69,12 +74,16 @@ void set_log_options(int level, char *filename) {
       strncpy(logfilename, filename, sizeof(logfilename));
       logfilename[sizeof(logfilename) - 1] = '\0';
    }
+
+   logstamp = timestamp;
 }
 
 void show_msg(int level, char *fmt, ...) {
 	va_list ap;
 	int saveerr;
 	extern char *progname;
+   char timestring[20];
+   time_t timestamp;
 
    if ((loglevel == MSGNONE) || (level > loglevel))
       return;
@@ -91,7 +100,19 @@ void show_msg(int level, char *fmt, ...) {
          logfile = stderr;
    }
 
+   if (logstamp) {
+      timestamp = time(NULL);
+      strftime(timestring, sizeof(timestring),  "%H:%M:%S", 
+               localtime(&timestamp));
+      fprintf(logfile, "%s ", timestring);
+   }
+
    fputs(progname, logfile);
+
+   if (logstamp) {
+      fprintf(logfile, "(%d)", getpid());
+   }
+   
    fputs(": ", logfile);
 	
 	va_start(ap, fmt);

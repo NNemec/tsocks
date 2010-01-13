@@ -182,7 +182,7 @@ fi
 
 dnl If we have to use the old method of overriding connect (i.e no
 dnl RTLD_NEXT) we need to know the location of the library that
-dnl contains connect()
+dnl contains connect(), select(), poll() and close()
 if test "${oldmethod}" = "yes"; then 
   dnl We need to find the path to the library, to do 
   dnl this we use find on the usual suspects, i.e /lib and
@@ -217,6 +217,22 @@ if test "${oldmethod}" = "yes"; then
   fi
 
   AC_MSG_RESULT($LIBCONNECT)
+
+  dnl close() should be in libc, find it
+  AC_MSG_CHECKING("location of libc.so")
+  LIBC=
+  for DIR in '/lib' '/usr/lib'; do
+    if test "${LIBC}" = ""; then
+      LIBC=`$FIND $DIR -name "libc.so.?" 2>/dev/null | $TAIL -1`
+    fi
+  done
+
+  AC_DEFINE_UNQUOTED(LIBC, "${LIBC}")
+  if test "${LIBC}" = ""; then
+     AC_MSG_ERROR("not found!")
+  fi
+
+  AC_MSG_RESULT($LIBC)
 fi
 
 dnl Find the correct select prototype on this machine 
@@ -273,6 +289,25 @@ case "${PROTO}" in
       ;;
 esac
 AC_DEFINE_UNQUOTED(CONNECT_SOCKARG, [${SOCKETARG}])
+
+dnl Find the correct close prototype on this machine 
+AC_MSG_CHECKING(for correct close prototype)
+PROTO=
+PROTO1='int fd'
+for testproto in "${PROTO1}" 
+do
+  if test "${PROTO}" = ""; then
+    AC_TRY_COMPILE([
+      #include <stdlib.h>
+      int close($testproto);
+    ],,[PROTO="$testproto";],)
+  fi
+done
+if test "${PROTO}" = ""; then
+  AC_MSG_ERROR("no match found!")
+fi
+AC_MSG_RESULT([close(${PROTO})])
+AC_DEFINE_UNQUOTED(CLOSE_SIGNATURE, [${PROTO}])
 
 dnl Find the correct poll prototype on this machine 
 AC_MSG_CHECKING(for correct poll prototype)

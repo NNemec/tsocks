@@ -20,6 +20,9 @@ hopefully shouldn't be needed */
 /* path to library containing connect(), needed if USE_OLD_DLSYM is enabled */
 #undef LIBCONNECT
 
+/* path to libc, needed if USE_OLD_DLSYM is enabled */
+#undef LIBC
+
 /* Configure the system resolver to use TCP queries on startup, this
 allows socksified DNS */
 #undef USE_SOCKS_DNS
@@ -36,6 +39,9 @@ allows socksified DNS */
 
 /* Prototype and function header for poll function */
 #undef POLL_SIGNATURE
+
+/* Prototype and function header for close function */
+#undef CLOSE_SIGNATURE
 
 /* Work out which function we have for conversion from string IPs to 
 numerical ones */
