@@ -6,6 +6,7 @@ exec_prefix = @exec_prefix@
 libexecdir = @libexecdir@
 sysconfdir = @sysconfdir@
 libdir = @libdir@
+bindir = @bindir@
 infodir = @infodir@
 mandir = @mandir@
 includedir = @includedir@
@@ -19,6 +20,7 @@ LIB_NAME = libtsocks
 COMMON = common
 PARSER = parser
 VALIDATECONF = validateconf
+SCRIPT = tsocks
 SHLIB_MAJOR = 1
 SHLIB_MINOR = 8
 SHLIB = ${LIB_NAME}.so.${SHLIB_MAJOR}.${SHLIB_MINOR}
@@ -57,15 +59,21 @@ ${SHLIB}: ${OBJS} ${COMMON}.o ${PARSER}.o
 %.o: %.c
 	${SHCC} ${CFLAGS} ${INCLUDES} -c ${CC_SWITCHES} $< -o $@
 
-install: ${TARGETS} installlib installman
+install: ${TARGETS} installscript installlib installman
+
+installscript:
+	${MKINSTALLDIRS} "${DESTDIR}${bindir}"
+	${INSTALL} ${SCRIPT} ${DESTDIR}${bindir}
 
 installlib:
 	${MKINSTALLDIRS} "${DESTDIR}${libdir}"
-	${INSTALL} ${STATICLIB} ${SHLIB} ${DESTDIR}${libdir}
+	${INSTALL} ${SHLIB} ${DESTDIR}${libdir}
 	ln -sf ${SHLIB} ${DESTDIR}${libdir}/${LIB_NAME}.so.${SHLIB_MAJOR}
 	ln -sf ${LIB_NAME}.so.${SHLIB_MAJOR} ${DESTDIR}${libdir}/${LIB_NAME}.so
 
 installman:
+	${MKINSTALLDIRS} "${DESTDIR}${mandir}/man1"
+	${INSTALL_DATA} tsocks.1 ${DESTDIR}${mandir}/man1/
 	${MKINSTALLDIRS} "${DESTDIR}${mandir}/man8"
 	${INSTALL_DATA} tsocks.8 ${DESTDIR}${mandir}/man8/
 	${MKINSTALLDIRS} "${DESTDIR}${mandir}/man5"

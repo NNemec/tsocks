@@ -13,15 +13,17 @@ test "$libdir" = "\${exec_prefix}/lib" && libdir="/lib"
 
 dnl Arguments we allow
 AC_ARG_ENABLE(socksdns,
-[  --enable-socksdns	force dns lookups to use tcp ])
+[  --enable-socksdns	      force dns lookups to use tcp ])
 AC_ARG_ENABLE(debug,
-[  --disable-debug	disable ALL error messages from tsocks ])
+[  --disable-debug         disable ALL error messages from tsocks ])
 AC_ARG_ENABLE(oldmethod,
-[  --enable-oldmethod	use the old method to override connect ])
+[  --enable-oldmethod	   use the old method to override connect ])
 AC_ARG_ENABLE(hostnames,
-[  --disable-hostnames	disable hostname lookups for socks servers ])
+[  --disable-hostnames	   disable hostname lookups for socks servers ])
+AC_ARG_ENABLE(envconf,
+[  --disable-envconf       do not allow TSOCKS_CONF_FILE to specify configuration file ])
 AC_ARG_WITH(conf,
-[  --with-conf=<file>   location of configuration file (/etc/tsocks.conf default)],[
+[  --with-conf=<file>      location of configuration file (/etc/tsocks.conf default)],[
 if test "${withval}" = "yes" ; then
   AC_MSG_ERROR("--with-conf requires the location of the configuration file as an argument")
 else
@@ -154,6 +156,10 @@ AC_EGREP_CPP(yes,
 
 if test "${enable_socksdns}" = "yes"; then
   AC_DEFINE(USE_SOCKS_DNS)
+fi
+
+if test "x${enable_envconf}" = "x"; then
+  AC_DEFINE(ALLOW_ENV_CONFIG)
 fi
 
 if test "${enable_oldmethod}" = "yes"; then

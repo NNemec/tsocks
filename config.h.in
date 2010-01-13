@@ -9,6 +9,10 @@ you're REALLY sure. It can also be turned off at run time, see the man
 page for details */
 #undef ALLOW_MSG_OUTPUT
 
+/* Allow TSOCKS_CONF_FILE in environment to specify config file 
+location */
+#undef ALLOW_ENV_CONFIG
+
 /* Use _GNU_SOURCE to define RTLD_NEXT, mostly for RH7 systems */
 #undef USE_GNU_SOURCE
 

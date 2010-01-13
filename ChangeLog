@@ -1,3 +1,10 @@
+version 1.80Beta4 - 2002.3.16 delius@progsoc.uts.edu.au
+   Allow TSOCKS_CONF_FILE to specify location of config
+   If the config is not found, assume all local
+   Now respects the default_user and pass specified for path
+   Added the tsocks shell script and tsocks(1) from the
+      debian package
+
 version 1.80Beta3 - 2002.2.20 delius@progsoc.uts.edu.au
    A large portion of tsocks has been rewritten
    Relax parser handling of whitespace, i.e it's ignored

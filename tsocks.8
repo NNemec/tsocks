@@ -21,6 +21,10 @@ C Shell -
 
 setenv LD_PRELOAD=/lib/libtsocks.so
 
+This process can be automated (for Bash, Bourne and Korn shell 
+users) for a single command or for all commands in a shell session
+by using the tsocks(1) script
+
 You can also setup tsocks in such a way that all processes 
 automatically use it, a very useful configuration. For more 
 information on this configuration see the CAVEATS section of this
@@ -51,8 +55,16 @@ are provided in the configuration file (the location of which is defined
 at configure time by the --with-conf=<file> argument but defaults to
 /etc/tsocks.conf). The structure of this file is documented in tsocks.conf(8)
 
-Some configuration parameters defined in the configuration file can be 
-overriden by environment variables as follows:
+Some configuration options can be specified at run time using environment
+variables as follows: 
+
+.TP
+.I TSOCKS_CONFFILE
+This environment variable overrides the default location of the tsocks 
+configuration file. This variable is not honored if the program tsocks
+is embedded in is setuid. In addition this environment variable can
+be compiled out of tsocks with the --disable-envconf argument to 
+configure at build time
 
 .TP
 .I TSOCKS_DEBUG
@@ -154,6 +166,7 @@ through the syscall() routine.
 
 .SH SEE ALSO
 tsocks.conf(5)
+tsocks(1)
 
 .SH AUTHOR
 Shaun Clowes (delius@progsoc.uts.edu.au)

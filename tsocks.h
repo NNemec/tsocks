@@ -4,6 +4,8 @@
 
 #define _TSOCKS_H	1
 
+#include <parser.h>
+
 /* Structure representing a socks connection request */
 struct sockreq {
    int8_t version;
@@ -27,7 +29,9 @@ struct connreq {
    int sockid;
    struct sockaddr_in connaddr;
    struct sockaddr_in serveraddr;
-   int sockstype;
+
+   /* Pointer to the config entry for the socks server */
+   struct serverent *path;
 
    /* Current state of this proxied socket */
    int state;

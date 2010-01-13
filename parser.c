@@ -57,7 +57,8 @@ int read_config (char *filename, struct parsedfile *config) {
 	/* Read the configuration file */
 	if ((conf = fopen(filename, "r")) == NULL) {
 		show_msg(MSGERR, "Could not open socks configuration file "
-			   "(%s)\n", filename);
+			   "(%s), assuming all networks local\n", filename);
+      handle_local(config, 0, "0.0.0.0/0.0.0.0");
 		rc = 1; /* Severe errors reading configuration */
 	}	
 	else {

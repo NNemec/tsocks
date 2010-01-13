@@ -246,15 +246,18 @@ ${ac_eA}HAVE_GETHOSTBYNAME${ac_eB}HAVE_GETHOSTBYNAME${ac_eC}1${ac_eD}
 ${ac_dA}HAVE_LIBDL${ac_dB}HAVE_LIBDL${ac_dC}1${ac_dD}
 ${ac_uA}HAVE_LIBDL${ac_uB}HAVE_LIBDL${ac_uC}1${ac_uD}
 ${ac_eA}HAVE_LIBDL${ac_eB}HAVE_LIBDL${ac_eC}1${ac_eD}
-${ac_dA}ALLOW_MSG_OUTPUT${ac_dB}ALLOW_MSG_OUTPUT${ac_dC}1${ac_dD}
-${ac_uA}ALLOW_MSG_OUTPUT${ac_uB}ALLOW_MSG_OUTPUT${ac_uC}1${ac_uD}
-${ac_eA}ALLOW_MSG_OUTPUT${ac_eB}ALLOW_MSG_OUTPUT${ac_eC}1${ac_eD}
+${ac_dA}ALLOW_ENV_CONFIG${ac_dB}ALLOW_ENV_CONFIG${ac_dC}1${ac_dD}
+${ac_uA}ALLOW_ENV_CONFIG${ac_uB}ALLOW_ENV_CONFIG${ac_uC}1${ac_uD}
+${ac_eA}ALLOW_ENV_CONFIG${ac_eB}ALLOW_ENV_CONFIG${ac_eC}1${ac_eD}
 CEOF
   sed -f conftest.frag conftest.in > conftest.out
   rm -f conftest.in
   mv conftest.out conftest.in
 
   cat > conftest.frag <<CEOF
+${ac_dA}ALLOW_MSG_OUTPUT${ac_dB}ALLOW_MSG_OUTPUT${ac_dC}1${ac_dD}
+${ac_uA}ALLOW_MSG_OUTPUT${ac_uB}ALLOW_MSG_OUTPUT${ac_uC}1${ac_uD}
+${ac_eA}ALLOW_MSG_OUTPUT${ac_eB}ALLOW_MSG_OUTPUT${ac_eC}1${ac_eD}
 ${ac_dA}HOSTNAMES${ac_dB}HOSTNAMES${ac_dC}1${ac_dD}
 ${ac_uA}HOSTNAMES${ac_uB}HOSTNAMES${ac_uC}1${ac_uD}
 ${ac_eA}HOSTNAMES${ac_eB}HOSTNAMES${ac_eC}1${ac_eD}
@@ -264,15 +267,15 @@ ${ac_eA}SELECT_SIGNATURE${ac_eB}SELECT_SIGNATURE${ac_eC}int n, fd_set *readfds, 
 ${ac_dA}CONNECT_SIGNATURE${ac_dB}CONNECT_SIGNATURE${ac_dC}int __fd, const struct sockaddr_in * __addr, socklen_t __len${ac_dD}
 ${ac_uA}CONNECT_SIGNATURE${ac_uB}CONNECT_SIGNATURE${ac_uC}int __fd, const struct sockaddr_in * __addr, socklen_t __len${ac_uD}
 ${ac_eA}CONNECT_SIGNATURE${ac_eB}CONNECT_SIGNATURE${ac_eC}int __fd, const struct sockaddr_in * __addr, socklen_t __len${ac_eD}
-${ac_dA}CONNECT_SOCKARG${ac_dB}CONNECT_SOCKARG${ac_dC}struct sockaddr_in *${ac_dD}
-${ac_uA}CONNECT_SOCKARG${ac_uB}CONNECT_SOCKARG${ac_uC}struct sockaddr_in *${ac_uD}
-${ac_eA}CONNECT_SOCKARG${ac_eB}CONNECT_SOCKARG${ac_eC}struct sockaddr_in *${ac_eD}
 CEOF
   sed -f conftest.frag conftest.in > conftest.out
   rm -f conftest.in
   mv conftest.out conftest.in
 
   cat > conftest.frag <<CEOF
+${ac_dA}CONNECT_SOCKARG${ac_dB}CONNECT_SOCKARG${ac_dC}struct sockaddr_in *${ac_dD}
+${ac_uA}CONNECT_SOCKARG${ac_uB}CONNECT_SOCKARG${ac_uC}struct sockaddr_in *${ac_uD}
+${ac_eA}CONNECT_SOCKARG${ac_eB}CONNECT_SOCKARG${ac_eC}struct sockaddr_in *${ac_eD}
 ${ac_dA}POLL_SIGNATURE${ac_dB}POLL_SIGNATURE${ac_dC}struct pollfd *ufds, unsigned long nfds, int timeout${ac_dD}
 ${ac_uA}POLL_SIGNATURE${ac_uB}POLL_SIGNATURE${ac_uC}struct pollfd *ufds, unsigned long nfds, int timeout${ac_uD}
 ${ac_eA}POLL_SIGNATURE${ac_eB}POLL_SIGNATURE${ac_eC}struct pollfd *ufds, unsigned long nfds, int timeout${ac_eD}

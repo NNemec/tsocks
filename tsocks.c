@@ -61,9 +61,10 @@ static int (*realresinit)(void);
 static int (*realconnect)(CONNECT_SIGNATURE);
 static int (*realselect)(SELECT_SIGNATURE);
 static int (*realpoll)(POLL_SIGNATURE);
-static int initialized = 0; 
 static struct parsedfile *config;
 static struct connreq *requests = NULL;
+static int suid = 0;
+static char *conffile = NULL;
 
 /* Exported Function Prototypes */
 void _init(void);
@@ -75,13 +76,13 @@ int res_init(void);
 #endif
 
 /* Private Function Prototypes */
-static int initialize();
-static struct connreq *new_socks_request(int, struct sockaddr_in *, 
-                                         struct sockaddr_in *, int);
+static int get_config();
+static int get_environment();
 static int connect_server(struct connreq *conn);
 static int send_socks_request(struct connreq *conn);
 static struct connreq *new_socks_request(int sockid, struct sockaddr_in *connaddr, 
-                                         struct sockaddr_in *serveraddr, int type);
+                                         struct sockaddr_in *serveraddr, 
+                                         struct serverent *path);
 static void kill_socks_request(struct connreq *conn);
 static int handle_request(struct connreq *conn);
 static struct connreq *find_socks_request(int sockid, int includefailed);
@@ -98,9 +99,6 @@ static int read_socksv5_connect(struct connreq *conn);
 static int read_socksv5_auth(struct connreq *conn);
 
 void _init(void) {
-   char *env;
-   int loglevel = MSGERR;
-   char *logfile = NULL;
 #ifdef USE_OLD_DLSYM
 	void *libconnect;
    void *libselect;
@@ -111,16 +109,8 @@ void _init(void) {
 	/* we do our general initialization on first call            */
 
    /* Determine the logging level */
-#ifndef ALLOW_MSG_OUTPUT
-   set_log_options(-1);
-#else
-   if ((env = getenv("TSOCKS_DEBUG")))
-      loglevel = atoi(env);
-   if (((env = getenv("TSOCKS_DEBUG_FILE"))) && !(getuid() != geteuid()))
-      logfile = env;
-   set_log_options(loglevel, logfile);
-#endif
-   
+   suid = (getuid() != geteuid());
+
 #ifndef USE_OLD_DLSYM
 	realconnect = dlsym(RTLD_NEXT, "connect");
 	realselect = dlsym(RTLD_NEXT, "select");
@@ -140,16 +130,52 @@ void _init(void) {
 #endif
 }
 
-static int initialize () {
+static int get_environment() {
+   static int done = 0;
+   int loglevel = MSGERR;
+   char *logfile = NULL;
+   char *env;
 
+   if (done)
+      return(0);
+
+   /* Determine the logging level */
+#ifndef ALLOW_MSG_OUTPUT
+   set_log_options(-1, stderr);
+#else
+   if ((env = getenv("TSOCKS_DEBUG")))
+      loglevel = atoi(env);
+   if (((env = getenv("TSOCKS_DEBUG_FILE"))) && !suid)
+      logfile = env;
+   set_log_options(loglevel, logfile);
+#endif
+
+   done = 1;
+
+   return(0);
+}
+
+static int get_config () {
+   static int done = 0;
+
+   if (done)
+      return(0);
+
+   /* Determine the location of the config file */
+#ifdef ALLOW_ENV_CONFIG
+   if (!suid) 
+      conffile = getenv("TSOCKS_CONF_FILE");
+#endif
+   
 	/* Read in the config file */
    config = malloc(sizeof(*config));
    if (!config)
       return(0);
-	read_config(NULL, config);
-	initialized = 1;
+	read_config(conffile, config);
    if (config->paths)
       show_msg(MSGDEBUG, "First lineno for first path is %d\n", config->paths->lineno);
+
+   done = 1;
 
 	return(0);
 
@@ -165,6 +191,8 @@ int connect(CONNECT_SIGNATURE) {
 	unsigned int res = -1;
 	struct serverent *path;
    struct connreq *newconn;
+
+   get_environment();
 
 	/* If the real connect doesn't exist, we're stuffed */
 	if (realconnect == NULL) {
@@ -189,8 +217,7 @@ int connect(CONNECT_SIGNATURE) {
    }
 
    /* If we haven't initialized yet, do it now */
-   if (initialized == 0) 
-      initialize();
+   get_config();
 
    /* Are we already handling this connect? */
    if ((newconn = find_socks_request(__fd, 1))) {
@@ -289,7 +316,7 @@ int connect(CONNECT_SIGNATURE) {
 
    /* If we haven't found a valid server we return connection refused */
    if (!gotvalidserver || 
-       !(newconn = new_socks_request(__fd, connaddr, &server_address, path->type))) {
+       !(newconn = new_socks_request(__fd, connaddr, &server_address, path))) {
       errno = ECONNREFUSED;
       return(-1);
    } else {
@@ -317,6 +344,8 @@ int select(SELECT_SIGNATURE) {
     * leave here */
    if (!requests)
       return(realselect(n, readfds, writefds, exceptfds, timeout));
+
+   get_environment();
 
    show_msg(MSGDEBUG, "Intercepted call to select with %d fds, "
             "0x%08x 0x%08x 0x%08x, timeout %08x\n", n, 
@@ -498,6 +527,8 @@ int poll(POLL_SIGNATURE) {
    if (!requests)
       return(realpoll(ufds, nfds, timeout));
 
+   get_environment();
+
    show_msg(MSGDEBUG, "Intercepted call to poll with %d fds, "
             "0x%08x timeout %d\n", nfds, ufds, timeout);
 
@@ -642,7 +673,8 @@ int poll(POLL_SIGNATURE) {
 }
 
 static struct connreq *new_socks_request(int sockid, struct sockaddr_in *connaddr, 
-                                         struct sockaddr_in *serveraddr, int type) {
+                                         struct sockaddr_in *serveraddr, 
+                                         struct serverent *path) {
    struct connreq *newconn;
 
    if ((newconn = malloc(sizeof(*newconn))) == NULL) {
@@ -654,8 +686,8 @@ static struct connreq *new_socks_request(int sockid, struct sockaddr_in *connadd
    /* Add this connection to be proxied to the list */
    memset(newconn, 0x0, sizeof(*newconn));
    newconn->sockid = sockid;
-   newconn->sockstype = type;
    newconn->state = UNSTARTED;
+   newconn->path = path;
    memcpy(&(newconn->connaddr), connaddr, sizeof(newconn->connaddr));
    memcpy(&(newconn->serveraddr), serveraddr, sizeof(newconn->serveraddr));
    newconn->next = requests;
@@ -807,7 +839,7 @@ static int connect_server(struct connreq *conn) {
 static int send_socks_request(struct connreq *conn) {
 	int rc = 0;
 	
-	if (conn->sockstype == 4) 
+	if (conn->path->type == 4) 
 		rc = send_socksv4_request(conn);
 	else
 		rc = send_socksv5_method(conn);
@@ -957,8 +989,8 @@ static int read_socksv5_method(struct connreq *conn) {
 		/* Determine the current *nix username */
 		nixuser = getpwuid(getuid());	
 
-		if (((uname = getenv("TSOCKS_USERNAME")) == NULL) &&
-		    ((uname = config->defaultserver.defuser) == NULL) &&
+		if (((uname = conn->path->defuser) == NULL) &&
+          ((uname = getenv("TSOCKS_USERNAME")) == NULL) &&
 		    ((uname = (nixuser == NULL ? NULL : nixuser->pw_name)) == NULL)) {
 			show_msg(MSGERR, "Could not get SOCKS username from "
 				   "local passwd file, tsocks.conf "
@@ -969,7 +1001,7 @@ static int read_socksv5_method(struct connreq *conn) {
 		} 
 
 		if (((upass = getenv("TSOCKS_PASSWORD")) == NULL) &&
-		    ((upass = config->defaultserver.defpass) == NULL)) {
+          ((upass = conn->path->defpass) == NULL)) {
 			show_msg(MSGERR, "Need a password in tsocks.conf or "
 				   "$TSOCKS_PASSWORD to authenticate with");
          conn->state = FAILED;
