@@ -1,3 +1,30 @@
+version 1.70Beta4 - 2001.7.11 delius@progsoc.uts.edu.au
+	References to verifyconf fixed to point to validateconf
+
+version 1.70Beta3 - 2001.3.13 delius@progsoc.uts.edu.au
+	Late resolution of socks servers
+	Addition of validateconf to check configuration
+	Conf file location can now be specified to configure script
+	Much advanced configuration syntax allowing multiple socks servers
+	Default user can now be specified without password (but not password
+		without user)
+	Much improved documentation (with new tsocks.conf(5) page)
+
+version 1.70Beta2 - 2001.3.3 delius@progsoc.uts.edu.au
+	Showstopper bug with socks server subnet verification fixed
+	Return code and errno issues corrected
+	Correct use of sockaddr union under Linux
+
+version 1.70Beta - 2001.2.27 delius@progsoc.uts.edu.au
+	Automated configuration using the GNU autoconf suite
+	RH7 Compilation issues resolved
+	SOCKS servers can now be specified as hostnames
+	Security problems with lengths of usernames and passwords resolved
+	Installation process in makefile improved
+	Common functions cleaned up and moved to seperate module	
+	Configuration read delayed to reduce overhead for UDP etc
+	Silly debug messages removed
+
 version 1.60 - 2000.7.11 delius@progsoc.uts.edu.au
 	Fixed segmentation fault when reading configuration file
 	Fixed Makefile.solaris issues

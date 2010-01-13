@@ -1,4 +1,4 @@
-tsocks 1.6 - Provide transparent SOCKS support
+tsocks 1.7- Provide transparent SOCKS support
 
 tsocks provides transparent network access through a SOCKS proxy. This
 is common in firewalled LAN environments where all connections to the
@@ -9,4 +9,4 @@ If they need the SOCKS server they connection is negotiated with the
 server transparently to the application. This allows existing applications
 to use SOCKS without recompilation or modification. tsocks is a wrapper
 library for the libc connect() call. Essentially it's the eqivalent of the
-Windows Socksified stacks that are around.
+socksified winsock.dll libraries that are available for windows.

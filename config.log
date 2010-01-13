@@ -1,0 +1,49 @@
+This file contains any messages produced by compilers while
+running configure, to aid debugging if configure makes a mistake.
+
+configure:616: checking host system type
+configure:640: checking for gcc
+configure:753: checking whether the C compiler (gcc  ) works
+configure:769: gcc -o conftest    conftest.c  1>&5
+configure:795: checking whether the C compiler (gcc  ) is a cross-compiler
+configure:800: checking whether we are using GNU C
+configure:809: gcc -E conftest.c
+configure:828: checking whether gcc accepts -g
+configure:871: checking for a BSD compatible install
+configure:924: checking whether ln -s works
+configure:946: checking how to run the C preprocessor
+configure:967: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1026: checking for ANSI C header files
+configure:1039: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1106: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1132: checking for dlfcn.h
+configure:1142: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1167: checking for sys/socket.h
+configure:1177: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1202: checking for fcntl.h
+configure:1212: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1239: checking for unistd.h
+configure:1249: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1279: checking for strcspn
+configure:1307: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1279: checking for strdup
+configure:1307: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1279: checking for strerror
+configure:1307: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1279: checking for strspn
+configure:1307: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1279: checking for strtol
+configure:1307: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1334: checking for strsep
+configure:1362: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1387: checking for socket
+configure:1415: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1485: checking for inet_aton
+configure:1513: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1636: checking for gethostbyname
+configure:1664: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1738: checking for dlsym in -ldl
+configure:1757: gcc -o conftest -g -O2   conftest.c -ldl   1>&5
+configure:1787: checking for RTLD_NEXT from dlfcn.h
+configure:1997: checking for correct connect prototype
+configure:2010: gcc -o conftest -g -O2   conftest.c -ldl  1>&5

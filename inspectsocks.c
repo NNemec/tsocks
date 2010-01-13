@@ -22,43 +22,28 @@
 
 */
 
-/* PreProcessor Defines */
-#define MYNAME		"inspectsocks: "   /* Name for error msgs      */
-#define DEFAULTPORT	1080		   /* Default SOCKS port       */
-#define OSNAME 		linux		   /* Linux/Solaris	       */
-#define OSVER 		1		   /* Version if Solaris       */
+/* Global configuration variables */ 
+char *progname = "inspectsocks: ";	   /* Name for error msgs      */
+int defaultport	= 1080;			   /* Default SOCKS port       */
 
 /* Header Files */
+#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <dlfcn.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <stdarg.h>
-#include <netdb.h>
-#if OSNAME == solaris
-#include <strings.h>
-#endif
-
-/* Private Function Prototypes */
-static void show_error(char *, ...);
-#if OSNAME == linux
-static unsigned int resolve_ip(char *);
-#else
-static in_addr_t resolve_ip(char *);
-#endif
+#include <common.h>
 
 int main(int argc, char *argv[]) {
 	char *usage = "Usage: <socks server name/ip> [portno]";
 	char req[9];
 	char resp[100];
-	unsigned short int portno = DEFAULTPORT;
+	unsigned short int portno = defaultport;
 	int ver = 0;
 	int read_bytes;
 	struct sockaddr_in server;
@@ -78,9 +63,9 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 		case 2:
-			if ((server.sin_addr.s_addr = resolve_ip(argv[1]))
+			if ((server.sin_addr.s_addr = resolve_ip(argv[1], 1,HOSTNAMES))
                             ==  -1) {
-				show_error("Invalid IP/host specified\n");
+				show_error("Invalid IP/host specified (%s)\n", argv[1]);
 				show_error("%s\n", usage);
 				exit(1);
 			}
@@ -151,7 +136,7 @@ int send_request(struct sockaddr_in *server, void *req,
 	if ((sock = socket(server->sin_family, SOCK_STREAM, 0)) < 0)
 	{
 		show_error("Could not create socket (%s)\n",
-			   sys_errlist[errno]);
+			   strerror(errno));
 		exit(1);
 	}
 	
@@ -159,20 +144,20 @@ int send_request(struct sockaddr_in *server, void *req,
 		    sizeof(struct sockaddr_in)) != -1) {
 	} else {
 		show_error("Connect failed! (%s)\n",
-			   sys_errlist[errno]);
+			   strerror(errno));
 		exit(1);
 	}
 
 	if (send(sock, (void *) req, reqlen,0) < 0) {
 		show_error("Could not send to server (%s)\n",
-			   sys_errlist[errno]);
+			   strerror(errno));
 		exit(1);
 	}
 
 	/* Now wait for reply */
 	if ((rc = recv(sock, (void *) rep, replen, 0)) < 0) {
 		show_error("Could not read from server\n",
-			   sys_errlist[errno]);
+			   strerror(errno));
 		exit(1);
 	}
 
@@ -181,63 +166,3 @@ int send_request(struct sockaddr_in *server, void *req,
 	return(rc);
 	
 }
-
-
-#if OSNAME == linux
-static unsigned int resolve_ip(char *host) {
-#else 
-static in_addr_t resolve_ip(char *host) {
-#endif
-	struct hostent *new;
-#if OSNAME == solaris 
-	in_addr_t       hostaddr;
-#else
-	unsigned int	hostaddr;
-#endif
-	struct in_addr *ip;
-    
-	if ((new = gethostbyname(host)) == (struct hostent *) 0) {
-		show_error("Failed to lookup %s as hostname\n", host);
-#if OSNAME == solaris
-		if ((hostaddr = inet_addr(host)) == (in_addr_t) - 1) {
-#else
-		if ((hostaddr = inet_addr(host)) == (unsigned int) - 1) {
-#endif
-			show_error("Could not convert %s to IP address\n", host);
-		}
-	} else {
-		ip = (struct in_addr *) * new->h_addr_list;
-		printf("Connecting to %s...\n", inet_ntoa(*ip));
-		return (ip->s_addr);
-	}
-
-	return (hostaddr);
-}
-
-static void show_error(char *fmt, ...) {
-	va_list ap;
-	int saveerr;
-	char *newfmt;
-
-	if ((newfmt = malloc(strlen(fmt) + strlen(MYNAME) + 1)) == NULL) {
-		/* Could not malloc, bail */
-		exit(1);
-	}
-	
-	strcpy(newfmt, MYNAME);
-	strcpy(newfmt + strlen(MYNAME), fmt);
-
-	va_start(ap, fmt);
-
-	/* Save errno */
-	saveerr = errno;
-
-	vfprintf(stderr, newfmt, ap);
-	
-	errno = saveerr;
-
-	va_end(ap);
-
-	free(newfmt);
-}
-	

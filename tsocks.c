@@ -21,12 +21,14 @@
 */
 
 /* PreProcessor Defines */
-#define DEBUG		1		   /* Show error messages?     */
-#define	CONFFILE	"/etc/tsocks.conf" /* Location of config file  */
-#define MAXLINE		BUFSIZ		   /* Max length of conf line  */
-#define MYNAME		"libtsocks: "      /* Name used in err msgs    */
-#define OSNAME 		linux		   /* Linux/Solaris	       */
-#define OSVER 		1		   /* Version if Solaris       */
+#include <config.h>
+
+#ifdef USE_GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+/* Global configuration variables */
+char *progname = "libtsocks: ";      	   /* Name used in err msgs    */
 
 /* Header Files */
 #include <stdio.h>
@@ -41,425 +43,79 @@
 #include <pwd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <common.h>
 #include <stdarg.h>
-#if OSNAME == solaris
-#include <strings.h>
-#endif
-#ifdef SOCKSDNS
-#if OSNAME == solaris
-#include <arpa/nameser.h>
-#endif
+#ifdef USE_SOCKS_DNS
 #include <resolv.h>
 #endif
-#include "tsocks.h"
+#include <parser.h>
+#include <tsocks.h>
 
 /* Global Declarations */
-#if OSNAME != solaris
-static int (*realconnect)(int __fd, __CONST_SOCKADDR_ARG __addr, 
-			  socklen_t __len);
-#elif OSVER == 6
-static int (*realconnect)(int, struct sockaddr *, size_t);
-#else
-static int (*realconnect)(int, const struct sockaddr *, socklen_t);
-#endif
-#ifdef SOCKSDNS
+REALCONNECT_PROTOTYPE
+#ifdef USE_SOCKS_DNS
 static int (*realresinit)(void);
 #endif
-static struct socksent *localnets = NULL; 
-static int initialized = 0;
-static int servertype = 0;
-static struct sockaddr_in server;
-static char *default_user = NULL;
-static char *default_pass = NULL;
+static int initialized = 0; 
 
 /* Exported Function Prototypes */
 void _init(void);
-#if OSNAME != solaris 
-int connect (int, __CONST_SOCKADDR_ARG, socklen_t);
-#elif OSVER == 6
-int connect (int, struct sockaddr *, int);
-#else
-int connect (int, const struct sockaddr *, socklen_t);
-#endif
-#ifdef SOCKSDNS
+CONNECT_PROTOTYPE
+#ifdef USE_SOCKS_DNS
 int res_init(void);
 #endif
 
 /* Private Function Prototypes */
 static int initialize();
-static int read_config();
-static int handle_line(char *);
-static int break_pair(char *, char **, char **);
-static int handle_server(char *);
-static int handle_type(char *);
-static int handle_port(char *);
-static int handle_local(char *);
-static int handle_defuser(char *);
-static int handle_defpass(char *);
-static int is_local(struct in_addr *);
-static int connect_socks(int, struct sockaddr_in *);
-static int connect_socksv4(int, struct sockaddr_in *);
-static int connect_socksv5(int, struct sockaddr_in *);
-static void show_error(char *, ...);
-#if OSNAME == solaris 
-static char *strsep(char **, const char *);
-#endif
+static int connect_socks(int, struct sockaddr_in *, struct sockaddr_in *);
+static int connect_socksv4(int, struct sockaddr_in *, struct sockaddr_in *);
+static int connect_socksv5(int, struct sockaddr_in *, struct sockaddr_in *);
 
 void _init(void) {
+#ifdef USE_OLD_DLSYM
+	void *libc;
+#endif
 
 	/* We could do all our initialization here, but to be honest */
 	/* most programs that are run won't use our services, so     */
 	/* we do our general initialization on first call            */
 
-	server.sin_family = 0;
-
-	/* We use an 'undocumented' dlsym parameter to get the       */
-	/* location of the 'real' libc connect. I found this code on */
-	/* the kernel mailing list and its used in liblogwrites.     */
-	/* I have no idea what compatibility issues it may bring,    */
-	/* but we can always revert to the old code                  */
-
+#ifndef USE_OLD_DLSYM
 	realconnect = dlsym(RTLD_NEXT, "connect");
-	#ifdef SOCKSDNS
+	#ifdef USE_SOCKS_DNS
 	realresinit = dlsym(RTLD_NEXT, "res_init");
 	#endif
+#else
+	libc = dlopen(LIBC, RTLD_LAZY);
+	realconnect = dlsym(libc, "connect");
+	#ifdef USE_SOCKS_DNS
+	realresinit = dlsym(libc, "res_init");
+	#endif
+	dlclose(libc);	
+#endif
+#ifndef DEBUG
+	setenv("TSOCKS_NO_DEBUG", "yes", 1);
+#endif
 	
 }
 
 static int initialize () {
 
 	/* Read in the config file */
-	read_config();
-
+	read_config(NULL);
 	initialized = 1;
 
 	return(0);
 
 }
 
-static int read_config () {
-	FILE *conf;
-	char line[MAXLINE];
-	int cleardefs = 0;
-
-	/* Read the local nets file */
-	if ((conf = fopen(CONFFILE, "r")) == NULL) {
-		show_error("Could not open socks configuration file "
-			   "(%s)\n", CONFFILE);
-	}	
-	else {
-		while (NULL != fgets(line, MAXLINE, conf)) {
-			/* This line _SHOULD_ end in \n so we  */
-			/* just chop off the \n and hand it on */
-			if (strlen(line) > 0)
-				line[strlen(line) - 1] = '\0';
-			handle_line(line);
-		} 
-		fclose(conf);
-
-		/* Always add the 127.0.0.1/255.0.0.0 subnet to local */
-		handle_local("127.0.0.0/255.0.0.0");
-
-		if (server.sin_family == 0) {
-			show_error("No valid SOCKS server specified in "
-				   "configuration file\n");
-		} else if (is_local(&server.sin_addr)) {
-			show_error("SOCKS server is not on a local subnet!\n");
-			server.sin_family = 0;
-		}
-
-		/* Default to the default SOCKS port */
-		if (server.sin_port == 0) {
-			server.sin_port = htons(1080);
-		}
-
-		/* Default to SOCKS V4 */
-		if (servertype == 0) {
-			servertype = 4;
-		}
-
-		if ((default_user != NULL) || (default_pass != NULL)) {
-			/* If the server type is version 4, neither */
-			/* username or password is valid */
-			if (servertype == 4) {
-				show_error("Default username/pass "
-					   "only valid for version 5 "
-					   "SOCKS servers\n");
-				cleardefs = 1;
-			} else 
-			/* If default user and pass not specified */
-			/* together then show an error */
-			if (!((default_user != NULL) && 
-			      (default_pass != NULL))) {
-				show_error("Default username and "
-					   "pass MUST be specified "
-					   "together\n");
-				cleardefs = 1;
-			}
-			if (cleardefs == 1) {
-				if (default_user != NULL) {
-					free(default_user);
-					default_user = NULL;
-				}
-				if (default_pass != NULL) {
-					free(default_user);
-					default_user = NULL;
-				}
-			}
-		}
-	}
-
-	return(0);
-}
-
-static int handle_line(char *line) {
-	char *type;
-	char *value;
-	char *tokenize;
-
-	tokenize = line;
-
-	/* We need to ignore all spaces at beginning of line */
-	line = line + strspn(line, " \t");
-
-	if (*line == '#') {
-		/* Comment Line, ignore it */
-	} else if (strcspn(line, " \n\t") == 0) {
-		/* Blank Line, ignore it */
-	} else {
-		/* This is a pair */
-		break_pair(line, &type, &value);
-		if ((type != NULL) && (value != NULL)) {
-			if (!strcmp(type, "server")) {
-				handle_server(value);
-			} else if (!strcmp(type, "server_port")) {
-				handle_port(value);
-			} else if (!strcmp(type, "server_type")) {
-				handle_type(value);
-			} else if (!strcmp(type, "default_user")) {
-				handle_defuser(value);
-			} else if (!strcmp(type, "default_pass")) {
-				handle_defpass(value);
-			} else if (!strcmp(type, "local")) {
-				handle_local(value);
-			} else {
-				show_error("Invalid pair type (%s) in "
-					   "configuration file\n", type);
-			}
-		} else {
-			show_error("Invalid line in configuration file " 
-				   "(%s)\n", line);
-		}
-	}
-
-	return(0);
-}
-
-static int break_pair(char *line, char **type, char **value) {
-
-	/* Now split the string up at the equals sign */
-	*type = strsep(&line, "=");
-	if (line == NULL) {
-		*value = NULL;
-	} else {
-		/* Strip off leading spaces from type */
-		*type = *type + strspn(*type, "\t");
-		/* Strip off any trailing spaces etc from the type */
-		*(*type + strcspn(*type," \t")) = '\0';
-		
-		*value = line;
-		/* Strip off any leading spaces from value */
-		*value = *value + strspn(*value, " \t");
-		/* Strip off trailing spaces from value */
-		*(*value + strcspn(*value," \t\n")) = '\0';
-	}
-
-	return(0);
-}	
-
-static int handle_server(char *value) {
-	char *ip;
-
-	ip = strsep(&value, " ");
-
-	if (server.sin_family == 0) {
-#if OSNAME == solaris
-		if ((server.sin_addr.s_addr = inet_addr(ip)) == -1) {
-#else
-		if (!(inet_aton(ip, &server.sin_addr))) {
-#endif
-			show_error("The SOCKS server (%s) in configuration "
-				   "file is invalid\n", ip);
-		} else {		
-			/* Construct the addr for the socks server */
-			server.sin_family = AF_INET; /* host byte order */
-	        	server.sin_port = 0;
-			bzero(&(server.sin_zero), 8);/* zero the rest of the struct */    
-		}
-	} else {
-		show_error("Only one SOCKS server may be specified "
-			   "in the configuration file\n");
-	}
-
-	return(0);
-}
-
-static int handle_port(char *value) {
-
-	if (server.sin_port != 0) {
-		show_error("Server port may only be specified once "
-			   "in configuration file\n");
-	} else {
-		errno = 0;
-		server.sin_port = (unsigned short int)
-				  htons(strtol(value, (char **)NULL, 10));
-		if ((errno != 0) || (server.sin_port == 0)) {
-			show_error("Invalid server port number "
-				   "specified in configuration file "
-				   "(%s)\n", value);
-			server.sin_port = 0;
-		}
-	}
-	
-	return(0);
-}
-
-static int handle_defuser(char *value) {
-
-	if (default_user != NULL) {
-		show_error("Default username may only be specified "
-			   "once in configuration file\n");
-	} else {
-		default_user = strdup(value);
-	}
-		
-	return(0);
-}
-
-static int handle_defpass(char *value) {
-
-	if (default_pass != NULL) {
-		show_error("Default password may only be specified "
-			   "once in configuration file\n");
-	} else {
-		default_pass = strdup(value);
-	}
-	
-	return(0);
-}
-
-static int handle_type(char *value) {
-
-	if (servertype != 0) {
-		show_error("Server type may only be specified once "
-			   "in configuration file\n");
-	} else {
-		errno = 0;
-		servertype = (int) strtol(value, (char **)NULL, 10);
-		if ((errno != 0) || (servertype == 0) ||
-		    ((servertype != 4) && (servertype != 5))) {
-			show_error("%d %d\n", errno, servertype);
-			show_error("Invalid server type "
-				   "specified in configuration file "
-				   "(%s) only 4 or 5 may be "
-				   "specified\n", value);
-			servertype = 0;
-		}
-	}
-	
-	return(0);
-}
-
-static int handle_local(char *value) {
-	char *ip;
-	char *subnet;
-	char buf[100];
-	char *split;
-	struct socksent *ent;
-
-	strncpy(buf, value, sizeof(buf) - 1);
-	split = buf;
-	ip = strsep(&split, "/");
-	subnet = strsep(&split, " \n");
-
-	if ((ip == NULL) || (subnet == NULL)) {
-		show_error("Local network pair (%s) is not validly "
-			   "constructed\n", value);
-		return(1);
-	} else {
-		/* Allocate the new entry */
-		if ((ent = (struct socksent *) malloc(sizeof(struct socksent)))
-		   == NULL) {
-			/* If we couldn't malloc some storage, leave */
-			exit(-1);
-		}
-
-#if OSNAME == solaris 
-		if ((ent->localip.s_addr = inet_addr(ip)) == -1) {
-#else
-		if (!(inet_aton(ip, &(ent->localip)))) {
-#endif
-			show_error("In configuration file IP for local "
-				   "network (%s) is not valid\n", ip);
-			free(ent);
-			return(1);
-		} 
-#if OSNAME == solaris
-		else if ((ent->localnet.s_addr = inet_addr(subnet)) == -1) {
-#else
-		else if (!(inet_aton(subnet, &(ent->localnet)))) {
-#endif
-			show_error("In configuration file SUBNET for " 
-				   "local network (%s) is not valid\n", ip);
-			free(ent);
-			return(1);
-		}
-		else if ((ent->localip.s_addr &
-			  ent->localnet.s_addr) != 
-	                 ent->localip.s_addr) {
-			show_error("In configuration file IP (%s) & "
-				   "SUBNET (%s) != IP. Ignored.\n",
-				   ip, subnet);
-			free(ent);
-			return(1);
-		}
-		else {
-			/* The entry is valid so add it to linked list */
-			ent -> next = localnets;
-			localnets = ent;
-		}			
-	}
-
-	return(0);
-}
-	
-	
-static int is_local(struct in_addr *testip) {
-	struct socksent *ent;
-
-	for (ent = localnets; ent != NULL; ent = ent -> next) {
-		if ((testip->s_addr & ent->localnet.s_addr) ==
-		    (ent->localip.s_addr & ent->localnet.s_addr))  {
-			return(0);
-		}
-	}
-
-	return(1);
-}
-
-#if OSNAME != solaris 
-int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len) {
-#elif OSVER == 6
-int connect (int __fd, struct sockaddr * __addr, int __len) {
-#else
-int connect (int __fd, const struct sockaddr * __addr, socklen_t __len) {
-#endif
+CONNECT_FUNCTION
 	struct sockaddr_in *connaddr;
-#if OSNAME != solaris
-	void **kludge;
-#endif
 	int sock_type = -1;
 	int sock_type_len = sizeof(sock_type);
+	unsigned int res = -1;
+	struct sockaddr_in server_address;
+	struct serverent *path;
 
 	/* If the real connect doesn't exist, we're stuffed */
 	if (realconnect == NULL) {
@@ -467,17 +123,12 @@ int connect (int __fd, const struct sockaddr * __addr, socklen_t __len) {
 		return(-1);
 	}
 
-	/* If we haven't initialized yet, do it now */
-	if (initialized == 0) {
-		initialize();
-	}
-
-	/* Ok, so this method sucks, but it's all I can think of */
-#if OSNAME == solaris 
+	/* Linux uses a union of all different types of sockaddr   */
+	/* structures not a simple sockaddr                        */
+#ifndef USE_UNION
 	connaddr = (struct sockaddr_in *) __addr;
 #else
-	kludge = (void *) & __addr; 
-	connaddr = (struct sockaddr_in *) *kludge;
+	connaddr = (struct sockaddr_in *) __addr.__sockaddr_in__;
 #endif
 
 	/* Get the type of the socket */
@@ -485,21 +136,66 @@ int connect (int __fd, const struct sockaddr * __addr, socklen_t __len) {
 		   (void *) &sock_type, &sock_type_len);
 
 	/* Only try and use socks if the socket is an INET socket, */
-	/* is a TCP stream, isn't on a local subnet and the        */
+	/* and is a TCP stream                                     */
 	/* socks server in the config was valid                    */
-	if ((connaddr->sin_family != AF_INET) ||
-	    (sock_type != SOCK_STREAM) ||
-	    (server.sin_family == 0) || 
-	    !(is_local(&(connaddr->sin_addr)))) {
-		return(realconnect(__fd, __addr, __len));
+	if ((connaddr->sin_family == AF_INET) &&
+	    (sock_type == SOCK_STREAM)) {
+
+		/* If we haven't initialized yet, do it now */
+		if (initialized == 0) {
+			initialize();
+		}
+
+		/* If the address is local connect */
+		if (!(is_local(&(connaddr->sin_addr)))) 
+			return(realconnect(__fd, __addr, __len));
+
+		/* Ok, so its not local, we need a path to the net */
+		pick_server(&path, &connaddr->sin_addr);
+						
+		if (path->address == NULL) {
+			if (path == &defaultserver) 
+				show_error("Connection needs to be made "
+					   "via default server but "
+					   "the default server has not "
+					   "been specified\n");
+			else 
+				show_error("Connection needs to be made "
+					   "via path specified at line "
+					   "%d in configuration file but "
+					   "the server has not been "
+					   "specified for this path\n",
+					   path->lineno);
+		} else if ((res = resolve_ip(path->address, 0, HOSTNAMES)) == -1) {
+			show_error("The SOCKS server (%s) in configuration "
+				   "file is invalid\n", path->address);
+		} else {	
+			/* Construct the addr for the socks server */
+			server_address.sin_family = AF_INET; /* host byte order */
+			server_address.sin_addr.s_addr = res;
+			server_address.sin_port = path->port;
+			bzero(&(server_address.sin_zero), 8);
+
+			/* Complain if this server isn't on a localnet */
+			if (is_local(&server_address.sin_addr)) {
+				show_error("SOCKS server %s (%s) is not on a local subnet!\n", path->address, inet_ntoa(server_address.sin_addr));
+			}
+		}
+
+		/* Call the real connect only if the config */
+		/* read failed 				    */
+		if (res == -1)  
+			return(realconnect(__fd, __addr, __len));
+		else
+			return(connect_socks(__fd, connaddr, &server_address));
 	} else {
-		return(connect_socks(__fd, connaddr));
+		return(realconnect(__fd, __addr, __len));
 	} 
 
 }
 
-static int connect_socks(int sockid, struct sockaddr_in *connaddr) {
-	int rc = 0;
+static int connect_socks(int sockid, struct sockaddr_in *connaddr, struct sockaddr_in *serveraddr) {
+	int rc = 0, rerrno = 0;
 	int sockflags;
 	
 	/* Get the flags of the socket, (incase its non blocking */
@@ -513,10 +209,11 @@ static int connect_socks(int sockid, struct sockaddr_in *connaddr) {
 		fcntl(sockid, F_SETFL, sockflags & (~(O_NONBLOCK)));
 	}
 
-	if (servertype == 4) 
-		rc = connect_socksv4(sockid, connaddr);
+	if (defaultserver.type == 4) 
+		rc = connect_socksv4(sockid, connaddr, serveraddr);
 	else
-		rc = connect_socksv5(sockid, connaddr);
+		rc = connect_socksv5(sockid, connaddr, serveraddr);
+	rerrno = errno;
 
 	/* If the socket was in non blocking mode, restore that */
 	if ((sockflags & O_NONBLOCK) != 0) {
@@ -524,7 +221,7 @@ static int connect_socks(int sockid, struct sockaddr_in *connaddr) {
 	}
 
 	if (rc != 0) {
-		errno = rc;
+		errno = rerrno;
 		return(-1);
 	}
 
@@ -532,8 +229,8 @@ static int connect_socks(int sockid, struct sockaddr_in *connaddr) {
 
 }			
 
-static int connect_socksv4(int sockid, struct sockaddr_in *connaddr) {
-	int rc = 0;
+static int connect_socksv4(int sockid, struct sockaddr_in *connaddr, struct sockaddr_in *serveraddr) {
+	int rc = 0, rerrno = 0;
 	int length = 0;
 	char *realreq;
 	struct passwd *user;
@@ -564,62 +261,73 @@ static int connect_socksv4(int sockid, struct sockaddr_in *connaddr) {
 	       (user == NULL ? "" : user->pw_name));
 
 	/* Connect this socket to the socks server instead */
-	if ((rc = realconnect(sockid, (struct sockaddr *) &server, 
+	if ((rc = realconnect(sockid, (struct sockaddr *) serveraddr, 
 		              sizeof(struct sockaddr_in))) != 0) {
 		show_error("Error %d attempting to connect to SOCKS "
-				   "server\n", errno);
-		rc = rc;
+				   "server (%s)\n", errno, strerror(errno));
+		rc = -1;
+		rerrno = errno;
 	} else {
 		rc = send(sockid, (void *) thisreq, length,0);
 		if (rc < 0) {
 			show_error("Error %d attempting to send SOCKS "
 				   "request\n", errno);
-			rc = rc;
+			rc = -1;
+			rerrno = ECONNREFUSED;
 		} else if ((rc = recv(sockid, (void *) &thisrep, 
 				      sizeof(struct sockrep), 0)) < 0) {
 			show_error("Error %d attempting to receive SOCKS "
 				   "reply\n", errno);
-			rc = ECONNREFUSED;
+			rc = -1;
+			rerrno = ECONNREFUSED;
 		} else if (rc < sizeof(struct sockrep)) {
 			show_error("Short reply from SOCKS server\n");
 			/* Let the application try and see how they */
 			/* go                                       */
 			rc = 0;
+			rerrno = 0;
 		} else if (thisrep.result == 91) {
 			show_error("SOCKS server refused connection\n");
-			rc = ECONNREFUSED;
+			rc = -1;
+			rerrno = ECONNREFUSED;
 		} else if (thisrep.result == 92) {
 			show_error("SOCKS server refused connection "
 				   "because of failed connect to identd "
 				   "on this machine\n");
-			rc = ECONNREFUSED;
+			rc = -1;
+			rerrno = ECONNREFUSED;
 		} else if (thisrep.result == 93) {
 			show_error("SOCKS server refused connection "
 				   "because identd and this library "
 				   "reported different user-ids\n");
-			rc = ECONNREFUSED;
+			rc = -1;
+			rerrno = ECONNREFUSED;
 		} else {
 			rc = 0;
+			rerrno = 0;
 		}
 	}
 
 	/* Free the SOCKS request storage that was malloced */
 	free(realreq);
 
-	return(rc);   
+	/* Set errno to the rerrno value so that the application */
+	/* gets a meaningful error message                       */
+	errno = rerrno;
 
+	return(rc);   
 }			
 
-static int connect_socksv5(int sockid, struct sockaddr_in *connaddr) {
+static int connect_socksv5(int sockid, struct sockaddr_in *connaddr, struct sockaddr_in *serveraddr) {
 	int rc = 0;
 	int offset = 0;
-	char *verstring = "\x05\x02\x02\x00";
+	char *verstring = "\x05\x02\x00\x02";
 	char *uname, *upass;
 	struct passwd *nixuser;
 	char buf[200];
 
 	/* Connect this socket to the socks server */
-	if ((rc = realconnect(sockid, (struct sockaddr *) &server, 
+	if ((rc = realconnect(sockid, (struct sockaddr *) serveraddr, 
 		              sizeof(struct sockaddr_in))) != 0) {
 		show_error("Error %d attempting to connect to SOCKS "
 				   "server\n", errno);
@@ -662,7 +370,7 @@ static int connect_socksv5(int sockid, struct sockaddr_in *connaddr) {
 		nixuser = getpwuid(getuid());	
 
 		if (((uname = getenv("TSOCKS_USERNAME")) == NULL) &&
-		    ((uname = default_user) == NULL) &&
+		    ((uname = defaultserver.defuser) == NULL) &&
 		    ((uname = (nixuser == NULL ? NULL : nixuser->pw_name)) == NULL)) {
 			show_error("Could not get SOCKS username from "
 				   "local passwd file, tsocks.conf "
@@ -673,12 +381,20 @@ static int connect_socksv5(int sockid, struct sockaddr_in *connaddr) {
 		} 
 
 		if (((upass = getenv("TSOCKS_PASSWORD")) == NULL) &&
-		    ((upass = default_pass) == NULL)) {
+		    ((upass = defaultserver.defpass) == NULL)) {
 			show_error("Need a password in tsocks.conf or "
 				   "$TSOCKS_PASSWORD to authenticate with");
 			rc = ECONNREFUSED;
 			return(rc);
 		} 
+
+		/* Check that the username / pass specified will */
+		/* fit into the buffer				 */
+		if ((3 + strlen(uname) + strlen(upass)) >= sizeof(buf)) {
+			show_error("The supplied socks username or "
+				   "password is too long");
+			exit(1);
+		}
 		
 		offset = 0;
 		buf[offset] = '\x01';
@@ -698,7 +414,6 @@ static int connect_socksv5(int sockid, struct sockaddr_in *connaddr) {
 				   "authentication\n", errno);
 			return(rc);
 		}
-
 
 		/* Receive the authentication response */
 		if ((rc = recv(sockid, (void *) buf, 2, 0)) < 0) {
@@ -790,7 +505,7 @@ static int connect_socksv5(int sockid, struct sockaddr_in *connaddr) {
 
 }			
 
-#ifdef SOCKSDNS
+#ifdef USE_SOCKS_DNS
 int res_init(void) {
         int rc;
 
@@ -809,56 +524,3 @@ int res_init(void) {
 }
 #endif
 
-static void show_error(char *fmt, ...) {
-#ifdef DEBUG
-	va_list ap;
-	int saveerr;
-	char *newfmt;
-
-
-	if ((newfmt = malloc(strlen(fmt) + strlen(MYNAME) + 1)) == NULL) {
-		/* Could not malloc, bail */
-		exit(1);
-	}
-	
-	strcpy(newfmt, MYNAME);
-	strcpy(newfmt + strlen(MYNAME), fmt);
-
-	va_start(ap, fmt);
-
-	/* Save errno */
-	saveerr = errno;
-
-	vfprintf(stderr, newfmt, ap);
-	
-	errno = saveerr;
-
-	va_end(ap);
-
-	free(newfmt);
-#endif
-}
-	
-#if OSNAME == solaris 
-/* A bug for bug copy of strsep for Linux (oh, but I wrote this one) */
-static char *strsep(char **text, const char *search) {
-        int len;
-        char *ret;
-
-        ret = *text;
-
-	if (*text == NULL) {
-		return(NULL);
-	} else {
-        	len = strcspn(*text, search);
-	        if (len == strlen(*text)) {
-	                *text = NULL;
-	        } else {
-	                *text = *text + len;
-	                **text = '\0';
-	                *text = *text + 1;
-	        }
-	}
-        return(ret);
-}
-#endif

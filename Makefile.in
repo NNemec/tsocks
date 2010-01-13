@@ -1,15 +1,14 @@
-# Generated automatically from Makefile.in by configure.
 # Makefile used by configure to create real Makefile
 
-CC=gcc
-prefix=/usr
-exec_prefix = ${prefix}
-libexecdir = ${exec_prefix}/libexec
-sysconfdir = ${prefix}/etc
-libdir = /lib
-infodir = ${prefix}/info
-mandir = ${prefix}/man
-includedir = ${prefix}/include
+CC=@CC@
+prefix=@prefix@
+exec_prefix = @exec_prefix@
+libexecdir = @libexecdir@
+sysconfdir = @sysconfdir@
+libdir = @libdir@
+infodir = @infodir@
+mandir = @mandir@
+includedir = @includedir@
 
 SHCC = ${CC} -fPIC 
 INSPECT=inspectsocks
@@ -23,12 +22,12 @@ SHLIB_MINOR=7
 SHLIB=${LIB_NAME}.so.${SHLIB_MAJOR}.${SHLIB_MINOR}
 
 #CFLAGS=-O2 -Wall
-INSTALL = /usr/bin/install -c
-INSTALL_DATA = ${INSTALL} -m 644
-CFLAGS = -g -O2
+INSTALL = @INSTALL@
+INSTALL_DATA = @INSTALL_DATA@
+CFLAGS = @CFLAGS@
 INCLUDES = -I.
-LIBS = 
-SPECIALLIBS = -ldl 
+LIBS = @LIBS@
+SPECIALLIBS = @SPECIALLIBS@
 
 SHOBJS = ${OBJS:.o=.so}
 

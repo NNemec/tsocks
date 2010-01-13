@@ -6,55 +6,78 @@ achieved that)
 
 	tar -zxvf tsocks-<version>.tar.gx
 
-2. If you're installing on Solaris, read INSTALL.solaris
+2. Run ./configure, options which might be of interest (and that are 
+   specific to tsocks include):
+	--enable-socksdns	This option causes tsocks to intercept
+				DNS lookups and attempt to force them
+				to use TCP instead of UDP and thus
+				be proxied through the socks server. This
+				is not a very elegant thing to do and
+				should be avoided where possible.
+	--disable-debug		This configuration option tells tsocks
+				to never output error messages to stderr.
+				This can also be achieved at run time
+				by defining the enviroment variable
+				TSOCKS_NO_ERROR to be "yes"
+	--enable-oldmethod	This forces tsocks not to use the
+				RTLD_NEXT parameter to dlsym to get the
+				address of the connect() method tsocks
+				overrides, instead it loads a reference
+				to the libc shared library and then uses
+				dlsym(). Again this is not very elegant
+				and shouldn't be required.
+	--disable-hostnames	This disables DNS lookups on names
+				provided as socks servers in the config
+				file. This option is necessary
+				if socks dns is enabled since tsocks
+				can't send a socks dns request to resolve
+				the location of the socks server. 
+	--with-conf=<filename>	You can specify the location of the tsocks
+				configuration file using this option, it
+				defaults to '/etc/tsocks.conf'
 
-3. Change any compile time options at the top of the tsocks.c file. There
-are three options you may be interested in
+Other standard autoconf options are provided by typing './configure
+--help'
 
-	CONFFILE - The path to the configuration file. This file specifies
-several options that affect the behaviour of the library. See the man page
-for further details
-
-	DEBUG - Defaults to 1, means that the library will display on the
-console any errors it encounters. This is normally what you want, but if
-you're after complete transparency, make this 0.
-
-	SOCKSDNS - This option is a way of forcing the libc resolver to
-use TCP instead of UDP. Essentially, it allows DNS lookups to go over
-SOCKS by making them TCP then using the SOCKS proxy. Its debatable whether
-this is nice or not, but it works. This code was contributed by Joris van
-Rantwijk. In order to enable it, above the #define CONFFILE line place a
-line like '#define SOCKSDNS'.
-
-4. Compile the code by typing:
+3. Compile the code by typing:
 
 	make
 
-5. If you experience any errors at this step and don't know how to fix
+This should result in the creation of the following:
+	- libtsocks.so - the libtsocks library
+	- validateconf - a utility to verify the tsocks configuration file
+	- inspectsocks - a utility to determine the version of a socks server
+	- saveme - a statically linked utility to remove /etc/ld.so.preload
+		   if it becomes corrupt
+
+4. If you experience any errors at this step and don't know how to fix
 them, please feel free to mail me at delius@progsoc.org
 
-6. Install the compiled library. You can skip this step if you only plan
+5. Install the compiled library. You can skip this step if you only plan
 to use the library for personal use. If you want all users on the machine
 to be able to use it however, su to root then type
 
 	make install
 
-This will by default install the library to /usr/lib (though you can edit
-this path in the "Makefile")
+This will install the library and its man pages (tsocks(8) and tsocks.conf(8)) 
+to the paths specified to configure.
 
-7. On linux systems at least, run 
+Note that by default the library is installed to /lib (though you can edit
+this path using the libdir option to the configure script)
 
-	/sbin/ldconfig 
+6. At this point you'll need to create the tsocks configuration file.
+There are two samples provided in the build directory called 
+tsocks.conf.simple.example and tsocks.conf.complex.example. 
+Documentation on the configuration file format is provided in the tsocks.conf
+man page ('man tsocks.conf'). 
 
-To update the links in the lib directory if you created the libraries for
-use by all users
+7. Having created the tsocks.conf file you should verify it using validateconf
+(some detail on validateconf can be found in the tsocks.conf man page). Normally
+validateconf is run without arguments ('./validateconf'). Any errors which are
+displayed by validateconf need to be rectified before tsocks will function
+correctly.
 
-8. At this point you'll need to create the tsocks configuration file.
-There is a sample provided (in the build directory called
-tsocks.conf.example). You will also find more information on this file in
-the man page ('man tsocks')
-
-9. You can now choose to make the library affect all users or just those
+8. You can now choose to make the library affect all users or just those
 who choose to use it. If you want users to use it themselves, they need to
 do the following in their shell before running applications that need to
 be transparently proxied:
@@ -63,19 +86,17 @@ be transparently proxied:
 
 	(in CSH) setenv LD_PRELOAD <path to library>
 
-	<path to library> = e.g /usr/lib/libtsocks.so.1.0
+	<path to library> = e.g /lib/libtsocks.so.1.7
 
 If you want all users to pick up the library, place the full path to the
 full library in the file /etc/ld.so.preload (e.g
-"/usr/lib/libtsocks.so). Be EXTREMELY careful if you do this, if you
+"/lib/libtsocks.so"). Be EXTREMELY careful if you do this, if you
 mistype it or in some way get it wrong this will make your machine
 UNUSABLE. Also, if you do this, make sure the directory you put the
 library in is in the root of the filesystem, if the library is
-not available at boot time, again, your machine will be UNUSABLE. This
-generally means you'll have to change the path to /lib (in the Makefile
-remove the "/usr/" bit).
+not available at boot time, again, your machine will be UNUSABLE. 
 
-10. Go ahead and use it! At this point everything should work. Again, if
+9. Go ahead and use it! At this point everything should work. Again, if
 you experience any problems, drop me a line at delius@progsoc.org. If you
 do happen to break your machine with /etc/ld.so.preload, the build process
 creates a statically linked executable called saveme in the build
