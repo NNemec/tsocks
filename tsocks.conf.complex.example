@@ -19,13 +19,15 @@ local = 192.168.0.0/255.255.255.0
 local = 10.0.0.0/255.0.0.0
 
 # Paths
-# For this example this machine needs to access 150.0.0.0/255.255.0.0 through
+# For this example this machine needs to access 150.0.0.0/255.255.0.0 as 
+# well as port 80 on the network 150.1.0.0/255.255.0.0 through
 # the socks 5 server at 10.1.7.25 (if this machines hostname was 
 # "socks.hello.com" we could also specify that, unless --disable-hostnames
 # was specified to ./configure).
 
 path {
 	reaches = 150.0.0.0/255.255.0.0
+	reaches = 150.1.0.0:80/255.255.0.0
 	server = 10.1.7.25
 	server_type = 5
 	default_user = delius

@@ -34,10 +34,14 @@ int defaultport	= 1080;			   /* Default SOCKS port       */
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <strings.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <common.h>
+
+int send_request(struct sockaddr_in *server, void *req, 
+                 int reqlen, void *rep, int replen);
 
 int main(int argc, char *argv[]) {
 	char *usage = "Usage: <socks server name/ip> [portno]";

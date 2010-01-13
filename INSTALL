@@ -17,7 +17,7 @@ achieved that)
 	--disable-debug		This configuration option tells tsocks
 				to never output error messages to stderr.
 				This can also be achieved at run time
-				by defining the enviroment variable
+				by defining the environment variable
 				TSOCKS_NO_ERROR to be "yes"
 	--enable-oldmethod	This forces tsocks not to use the
 				RTLD_NEXT parameter to dlsym to get the
@@ -59,7 +59,7 @@ to be able to use it however, su to root then type
 
 	make install
 
-This will install the library and its man pages (tsocks(8) and tsocks.conf(8)) 
+This will install the library and its man pages (tsocks(8) and tsocks.conf(5)) 
 to the paths specified to configure.
 
 Note that by default the library is installed to /lib (though you can edit
@@ -86,7 +86,7 @@ be transparently proxied:
 
 	(in CSH) setenv LD_PRELOAD <path to library>
 
-	<path to library> = e.g /lib/libtsocks.so.1.7
+	<path to library> = e.g /lib/libtsocks.so.1.8
 
 If you want all users to pick up the library, place the full path to the
 full library in the file /etc/ld.so.preload (e.g

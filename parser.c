@@ -6,8 +6,10 @@
 
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <config.h>
 #include "common.h"
@@ -24,7 +26,6 @@ static struct serverent *currentcontext = NULL;
 
 int read_config(char *);
 int is_local(struct in_addr *);
-int pick_server(struct serverent **, struct in_addr *); 
 static int handle_line(char *, int);
 static int check_server(struct serverent *);
 static int tokenize(char *, int, char *[]);
@@ -38,14 +39,11 @@ static int handle_local(int, char *);
 static int handle_defuser(int, char *);
 static int handle_defpass(int, char *);
 static void reset_serverent(struct serverent *);
-#ifdef DEFINE_STRSEP
-static char *strsep(char **, const char *);
-#endif
+static int make_netent(char *value, struct netent **ent);
 
 int read_config (char *filename) {
 	FILE *conf;
 	char line[MAXLINE];
-	int cleardefs = 0;
 	int rc = 0;
 	int lineno = 1;
 	struct serverent *server;
@@ -99,7 +97,6 @@ int read_config (char *filename) {
 
 /* Check server entries (and establish defaults) */
 static int check_server(struct serverent *server) {
-	int cleardefs;
 
 	/* Default to the default SOCKS port */
 	if (server->port == 0) {
@@ -117,8 +114,6 @@ static int check_server(struct serverent *server) {
 
 
 static int handle_line(char *line, int lineno) {
-	char *type;
-	char *value;
 	char *words[10];
 	static char savedline[MAXLINE];
 	int   nowords = 0, i;
@@ -255,7 +250,7 @@ static int handle_reaches(int lineno, char *value) {
 	rc = make_netent(value, &ent);
 	switch(rc) {
 		case 1:
-			show_error("Local network pair (%s) is not validly "
+			show_error("Local network specification (%s) is not validly "
 				   "constructed in reach statement on line "
 				   "%d in configuration "
 				   "file\n", value, lineno);
@@ -263,13 +258,13 @@ static int handle_reaches(int lineno, char *value) {
 			break;
 		case 2:
 			show_error("IP in reach statement "
-				   "network pair (%s) is not valid on line "
+				   "network specification (%s) is not valid on line "
 				   "%d in configuration file\n", value, lineno);
 			return(0);
 			break;
 		case 3:
 			show_error("SUBNET in reach statement " 
-				   "network pair (%s) is not valid on "
+				   "network specification (%s) is not valid on "
 				   "line %d in configuration file\n", value, 
 				   lineno);
 			return(0);
@@ -278,8 +273,28 @@ static int handle_reaches(int lineno, char *value) {
 			show_error("IP (%s) & ", inet_ntoa(ent->localip));
 			show_error("SUBNET (%s) != IP on line %d in "
 				   "configuration file, ignored\n",
-				   inet_ntoa(ent->localnet));
+				   inet_ntoa(ent->localnet), lineno);
 			return(0);
+         break;
+		case 5:
+			show_error("Start port in reach statement "
+                    "network specification (%s) is not valid on line "
+                    "%d in configuration file\n", value, lineno);
+			return(0);
+			break;
+		case 6:
+			show_error("End port in reach statement "
+                    "network specification (%s) is not valid on line "
+                    "%d in configuration file\n", value, lineno);
+			return(0);
+			break;
+		case 7:
+			show_error("End port in reach statement "
+                    "network specification (%s) is less than the start "
+                    "port on line %d in configuration file\n", value, 
+                    lineno);
+			return(0);
+			break;
 	}
 
 	/* The entry is valid so add it to linked list */
@@ -291,9 +306,8 @@ static int handle_reaches(int lineno, char *value) {
 
 static int handle_server(int lineno, char *value) {
 	char *ip;
-	unsigned int res;
 
-	ip = strsep(&value, " ");
+	ip = strsplit(NULL, &value, " ");
 
 	/* We don't verify this ip/hostname at this stage, */
 	/* its resolved immediately before use in tsocks.c */
@@ -422,20 +436,20 @@ static int handle_local(int lineno, char *value) {
 	rc = make_netent(value, &ent);
 	switch(rc) {
 		case 1:
-			show_error("Local network pair (%s) is not validly "
+			show_error("Local network specification (%s) is not validly "
 				   "constructed on line %d in configuration "
 				   "file\n", value, lineno);
 			return(0);
 			break;
 		case 2:
 			show_error("IP for local "
-				   "network pair (%s) is not valid on line "
+				   "network specification (%s) is not valid on line "
 				   "%d in configuration file\n", value, lineno);
 			return(0);
 			break;
 		case 3:
 			show_error("SUBNET for " 
-				   "local network pair (%s) is not valid on "
+				   "local network specification (%s) is not valid on "
 				   "line %d in configuration file\n", value, 
 				   lineno);
 			return(0);
@@ -444,9 +458,26 @@ static int handle_local(int lineno, char *value) {
 			show_error("IP (%s) & ", inet_ntoa(ent->localip));
 			show_error("SUBNET (%s) != IP on line %d in "
 				   "configuration file, ignored\n",
-				   inet_ntoa(ent->localnet));
+				   inet_ntoa(ent->localnet), lineno);
 			return(0);
+		case 5:
+		case 6:
+		case 7:
+			show_error("Port specification is invalid and "
+				   "not allowed in local network specification "
+               "(%s) on line %d in configuration file\n",
+				   value, lineno);
+			return(0);
+         break;
 	}
+
+   if (ent->startport || ent->endport) {
+      show_error("Port specification is "
+            "not allowed in local network specification "
+            "(%s) on line %d in configuration file\n",
+            value, lineno);
+      return(0);
+   }
 
 	/* The entry is valid so add it to linked list */
 	ent -> next = localnets;
@@ -455,54 +486,94 @@ static int handle_local(int lineno, char *value) {
 	return(0);
 }
 
-/* Construct a netent given a string like "198.126.0.1/255.255.255.0" */
+/* Construct a netent given a string like                             */
+/* "198.126.0.1[:portno[-portno]]/255.255.255.0"                      */
 int make_netent(char *value, struct netent **ent) {
 	char *ip;
 	char *subnet;
+   char *startport = NULL;
+   char *endport = NULL;
+   char *badchar;
+   char separator;
 	static char buf[200];
 	char *split;
 
+   /* Get a copy of the string so we can modify it */
 	strncpy(buf, value, sizeof(buf) - 1);
 	buf[sizeof(buf) - 1] = (char) 0;
 	split = buf;
-	ip = strsep(&split, "/");
-	subnet = strsep(&split, " \n");
+
+   /* Now rip it up */
+	ip = strsplit(&separator, &split, "/:");
+   if (separator == ':') {
+      /* We have a start port */
+      startport = strsplit(&separator, &split, "-/");
+      if (separator == '-') 
+         /* We have an end port */
+         endport = strsplit(&separator, &split, "/");
+   }
+	subnet = strsplit(NULL, &split, " \n");
 
 	if ((ip == NULL) || (subnet == NULL)) {
-		/* Network pair not validly constructed */
+		/* Network specification not validly constructed */
 		return(1);
-	} else {
-		/* Allocate the new entry */
-		if ((*ent = (struct netent *) malloc(sizeof(struct netent)))
-		   == NULL) {
-			/* If we couldn't malloc some storage, leave */
-			exit(1);
-		}
+   }
 
+   /* Allocate the new entry */
+   if ((*ent = (struct netent *) malloc(sizeof(struct netent)))
+      == NULL) {
+      /* If we couldn't malloc some storage, leave */
+      exit(1);
+   }
+
+   if (!startport)
+      (*ent)->startport = 0;
+   if (!endport)
+      (*ent)->endport = 0;
+         
 #ifdef HAVE_INET_ADDR
-		if (((*ent)->localip.s_addr = inet_addr(ip)) == -1) {
+   if (((*ent)->localip.s_addr = inet_addr(ip)) == -1) {
 #elif defined(HAVE_INET_ATON)
-		if (!(inet_aton(ip, &((*ent)->localip)))) {
+   if (!(inet_aton(ip, &((*ent)->localip)))) {
 #endif
-			/* Badly constructed IP */
-			free(*ent);
-			return(2);
-		}
+      /* Badly constructed IP */
+      free(*ent);
+      return(2);
+   }
 #ifdef HAVE_INET_ADDR
-		else if (((*ent)->localnet.s_addr = inet_addr(subnet)) == -1) {
+   else if (((*ent)->localnet.s_addr = inet_addr(subnet)) == -1) {
 #elif defined(HAVE_INET_ATON)
-		else if (!(inet_aton(subnet, &((*ent)->localnet)))) {
+   else if (!(inet_aton(subnet, &((*ent)->localnet)))) {
 #endif
-			/* Badly constructed subnet */
-			free(*ent);
-			return(3);
-		} else if (((*ent)->localip.s_addr &
-			    (*ent)->localnet.s_addr) != 
-	                   (*ent)->localip.s_addr) {
-			/* Subnet and Ip != Ip */
-			return(4);
-		}
-	}	
+      /* Badly constructed subnet */
+      free(*ent);
+      return(3);
+   } else if (((*ent)->localip.s_addr &
+          (*ent)->localnet.s_addr) != 
+                   (*ent)->localip.s_addr) {
+      /* Subnet and Ip != Ip */
+      free(*ent);
+      return(4);
+   } else if (startport && 
+              (!((*ent)->startport = strtol(startport, &badchar, 10)) || 
+               (*badchar != 0) || ((*ent)->startport > 65535))) {
+      /* Bad start port */
+      free(*ent);
+      return(5);
+   } else if (endport && 
+              (!((*ent)->endport = strtol(endport, &badchar, 10)) || 
+               (*badchar != 0) || ((*ent)->endport > 65535))) {
+      /* Bad end port */
+      free(*ent);
+      return(6);
+   } else if (((*ent)->startport > (*ent)->endport) && !(startport && !endport)) {
+      /* End port is less than start port */
+      free(*ent);
+      return(7);
+   }
+
+   if (startport && !endport)
+      (*ent)->endport = (*ent)->startport;
 
 	return(0);
 }
@@ -534,7 +605,7 @@ int is_local(struct in_addr *testip) {
 }
 
 /* Find the appropriate server to reach an ip */
-int pick_server(struct serverent **ent, struct in_addr *ip) {
+int pick_server(struct serverent **ent, struct in_addr *ip, unsigned int port) {
 	struct netent *net;	
 
 	*ent = paths;
@@ -543,8 +614,10 @@ int pick_server(struct serverent **ent, struct in_addr *ip) {
 		/* with a path to this network                */
 		net = (*ent)->reachnets;
 		while (net != NULL) {
-			if ((ip->s_addr & net->localnet.s_addr) ==
-		    	    (net->localip.s_addr & net->localnet.s_addr))  
+			if (((ip->s_addr & net->localnet.s_addr) ==
+              (net->localip.s_addr & net->localnet.s_addr)) &&
+             (!net->startport || 
+              ((net->startport <= port) && (net->endport >= port))))  
 				/* Found the net, return */
 				return(0);
 			net = net->next;
@@ -557,26 +630,39 @@ int pick_server(struct serverent **ent, struct in_addr *ip) {
 	return(0);
 }
 	
-#ifdef DEFINE_STRSEP	
-/* A bug for bug copy of strsep for Linux (oh, but I wrote this one) */
-static char *strsep(char **text, const char *search) {
-        int len;
-        char *ret;
+/* This function is very much like strsep, it looks in a string for */
+/* a character from a list of characters, when it finds one it      */
+/* replaces it with a \0 and returns the start of the string        */
+/* (basically spitting out tokens with arbitrary separators). If no */
+/* match is found the remainder of the string is returned and       */
+/* the start pointer is set to be NULL. The difference between      */
+/* standard strsep and this function is that this one will          */
+/* set *separator to the character separator found if it isn't null */
+char *strsplit(char *separator, char **text, const char *search) {
+   int len;
+   char *ret;
 
-        ret = *text;
+   ret = *text;
 
 	if (*text == NULL) {
+      if (separator)
+         *separator = '\0';
 		return(NULL);
 	} else {
-        	len = strcspn(*text, search);
-	        if (len == strlen(*text)) {
-	                *text = NULL;
-	        } else {
-	                *text = *text + len;
-	                **text = '\0';
-	                *text = *text + 1;
-	        }
+      len = strcspn(*text, search);
+      if (len == strlen(*text)) {
+         if (separator)
+            *separator = '\0';
+         *text = NULL;
+      } else {
+         *text = *text + len;
+         if (separator)
+            *separator = **text;
+         **text = '\0';
+         *text = *text + 1;
+      }
 	}
-        return(ret);
+
+   return(ret);
 }
-#endif
+

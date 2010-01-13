@@ -42,6 +42,14 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 
+dnl Check if the C compiler accepts -Wall
+AC_MSG_CHECKING("if the C compiler accepts -Wall")
+OLDCFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Wall"
+AC_TRY_COMPILE(,,AC_MSG_RESULT(yes),[
+   CFLAGS="$OLDCFLAGS"
+   AC_MSG_RESULT(no)])
+
 dnl Checks for standard header files.
 AC_HEADER_STDC
 
@@ -50,6 +58,9 @@ AC_CHECK_HEADER(dlfcn.h,,AC_MSG_ERROR("dlfcn.h not found"))
 
 dnl Check for the socket header
 AC_CHECK_HEADER(sys/socket.h,,AC_MSG_ERROR("sys/socket.h not found"))
+
+dnl Check for the arpa/inet.h header (inet_ntoa and inet_addr)
+AC_CHECK_HEADER(arpa/inet.h,,AC_MSG_ERROR("arpa/inet.h not found"))
 
 dnl Check for the fcntl header
 AC_CHECK_HEADER(fcntl.h,,AC_MSG_ERROR("fcntl.h not found"))
@@ -60,9 +71,6 @@ AC_CHECK_HEADERS(unistd.h)
 dnl Checks for library functions.
 AC_CHECK_FUNCS(strcspn strdup strerror strspn strtol,,[ 
 	       AC_MSG_ERROR("Required function not found")])
-
-dnl Check for strsep, we provide it ourselves if they don't have it
-AC_CHECK_FUNC(strsep,, AC_DEFINE(DEFINE_STRSEP))
 
 dnl Check for socket
 AC_CHECK_FUNC(socket,, [
@@ -92,7 +100,7 @@ dnl Replace `main' with a function in -ldl:
 AC_CHECK_LIB(dl, dlsym,,AC_MSG_ERROR("libdl is required"))
 
 dnl If we're using gcc here define _GNU_SOURCE
-AC_MSG_CHECKING(for RTLD_NEXT from dlfcn.h)
+AC_MSG_CHECKING("for RTLD_NEXT from dlfcn.h")
 AC_EGREP_CPP(yes,
 [
  #include <dlfcn.h>
@@ -103,7 +111,7 @@ AC_EGREP_CPP(yes,
   AC_MSG_RESULT(yes)
 ], [
   AC_MSG_RESULT(no)
-  AC_MSG_CHECKING(for RTLD_NEXT from dlfcn.h with _GNU_SOURCE)
+  AC_MSG_CHECKING("for RTLD_NEXT from dlfcn.h with _GNU_SOURCE")
   AC_EGREP_CPP(yes,
   [
    #define _GNU_SOURCE

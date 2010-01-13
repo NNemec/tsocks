@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 
 unsigned int resolve_ip(char *host, int showmsg, int allownames) {

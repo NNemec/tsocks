@@ -44,7 +44,7 @@ void show_conf();
 void test_host(char *);
 
 int main(int argc, char *argv[]) {
-	char *usage = "Usage: [-f conf file] [-t hostname/ip]"; 
+	char *usage = "Usage: [-f conf file] [-t hostname/ip[:port]]"; 
 	char *filename = NULL;
 	char *testhost = NULL;
 	int i;
@@ -89,14 +89,25 @@ int main(int argc, char *argv[]) {
 void test_host(char *host) { 
 	struct in_addr hostaddr;
 	struct serverent *path;
+   char *hostname, *port;
+   char separator;
+   unsigned long portno = 0;
+
+   /* See if a port has been specified */
+   hostname = strsplit(&separator, &host, ": \t\n");
+   if (separator == ':') {
+      port = strsplit(NULL, &host, " \t\n");
+      if (port) 
+         portno = strtol(port, NULL, 0);
+   }
 
 	/* First resolve the host to an ip */
-	if ((hostaddr.s_addr = resolve_ip(host, 0, 1)) == -1) {
+	if ((hostaddr.s_addr = resolve_ip(hostname, 0, 1)) == -1) {
 		fprintf(stderr, "Error: Cannot resolve %s\n", host);
 		return;
 	} else {
 		printf("Finding path for %s...\n", inet_ntoa(hostaddr));
-		pick_server(&path, &hostaddr);
+		pick_server(&path, &hostaddr, portno);
 		if (path == &defaultserver) {
 			printf("Path is via default server:\n");
 			show_server(path, 1);
@@ -203,8 +214,7 @@ void show_server(struct serverent *server, int def) {
 	if (def) {
 		if (server->reachnets != NULL) { 
 			fprintf(stderr, "Error: The default server has "
-			       "specified "
-			       "networks it can reach (reach statements), "
+			       "specified networks it can reach (reach statements), "
 			       "these statements are ignored since the "
 			       "default server will be tried for any network "
 			       "which is not specified in a reach statement "
@@ -219,8 +229,12 @@ void show_server(struct serverent *server, int def) {
 		while (net != NULL) {
 			printf("Network: %15s ",
 			       inet_ntoa(net->localip));
-			printf("NetMask: %15s\n", 
+			printf("NetMask: %15s ", 
 			       inet_ntoa(net->localnet));
+         if (net->startport)
+            printf("Ports: %5lu - %5lu",
+                   net->startport, net->endport);
+         printf("\n");
 			net = net->next;
 		}
 	}

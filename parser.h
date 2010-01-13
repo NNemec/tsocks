@@ -21,8 +21,10 @@ struct serverent {
 
 /* Structure representing a network */
 struct netent {
-        struct in_addr localip; /* Base IP of the network */
-        struct in_addr localnet; /* Mask for the network */
+   struct in_addr localip; /* Base IP of the network */
+   struct in_addr localnet; /* Mask for the network */
+   unsigned long startport; /* Range of ports for the */
+   unsigned long endport;   /* network                */
 	struct netent *next; /* Pointer to next network entry */
 };
 
@@ -34,6 +36,7 @@ extern struct serverent *paths;
 /* Functions provided by parser module */
 int read_config(char *);
 int is_local(struct in_addr *);
-int pick_server(struct serverent **, struct in_addr *);
+int pick_server(struct serverent **, struct in_addr *, unsigned int port);
+char *strsplit(char *separator, char **text, const char *search);
 
 #endif

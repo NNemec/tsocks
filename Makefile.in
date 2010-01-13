@@ -18,10 +18,9 @@ COMMON=common
 PARSER=parser
 VALIDATECONF=validateconf
 SHLIB_MAJOR=1
-SHLIB_MINOR=7
+SHLIB_MINOR=8
 SHLIB=${LIB_NAME}.so.${SHLIB_MAJOR}.${SHLIB_MINOR}
 
-#CFLAGS=-O2 -Wall
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 CFLAGS = @CFLAGS@
@@ -37,23 +36,17 @@ TARGETS= ${SHLIB} ${UTIL_LIB} ${SAVE} ${INSPECT} ${VALIDATECONF}
 
 all: ${TARGETS}
 
-${COMMON}.o: ${COMMON}.c
-	${SHCC} ${CFFLAGS} ${INCLUDES} -c -o ${COMMON}.o ${COMMON}.c
-
-${PARSER}.o: ${PARSER}.c
-	${SHCC} ${CFFLAGS} ${INCLUDES} -c -o ${PARSER}.o ${PARSER}.c
-
 ${VALIDATECONF}: ${VALIDATECONF}.c ${COMMON}.o ${PARSER}.o
-	${SHCC} ${CFFLAGS} ${LIBS} ${INCLUDES} -o ${VALIDATECONF} ${VALIDATECONF}.c ${COMMON}.o ${PARSER}.o
+	${SHCC} ${CFLAGS} ${LIBS} ${INCLUDES} -o ${VALIDATECONF} ${VALIDATECONF}.c ${COMMON}.o ${PARSER}.o
 
 ${INSPECT}: ${INSPECT}.c ${COMMON}.o
-	${SHCC} ${CFFLAGS} ${LIBS} ${INCLUDES} -o ${INSPECT} ${INSPECT}.c ${COMMON}.o
+	${SHCC} ${CFLAGS} ${LIBS} ${INCLUDES} -o ${INSPECT} ${INSPECT}.c ${COMMON}.o
 
 ${SAVE}: ${SAVE}.c
-	${SHCC} ${CFFLAGS} ${INCLUDES} -static -o ${SAVE} ${SAVE}.c
+	${SHCC} ${CFLAGS} ${INCLUDES} -static -o ${SAVE} ${SAVE}.c
 
-${SHLIB}: ${SHOBJS} ${COMMON}.o ${PARSER}.o
-	${SHCC} ${CFLAGS} ${SPECIALLIBS} ${LIBS} ${INCLUDES} -nostdlib -shared -o ${SHLIB} ${SHOBJS} ${COMMON}.o ${PARSER}.o ${DYNLIB_FLAGS}
+${SHLIB}: ${OBJS} ${COMMON}.o ${PARSER}.o
+	${SHCC} ${CFLAGS} ${SPECIALLIBS} ${LIBS} ${INCLUDES} -nostdlib -shared -o ${SHLIB} ${OBJS} ${COMMON}.o ${PARSER}.o ${DYNLIB_FLAGS}
 	ln -sf ${SHLIB} ${LIB_NAME}.so
 
 %.so: %.c
@@ -83,4 +76,4 @@ clean:
 	-rm -f *.so *.so.* *.o *~ ${TARGETS}
 
 distclean: clean
-	-rm -f config.cache config.log
+	-rm -f config.cache config.log config.h Makefile

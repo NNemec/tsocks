@@ -38,6 +38,7 @@ char *progname = "libtsocks: ";      	   /* Name used in err msgs    */
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <strings.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pwd.h>
@@ -67,7 +68,7 @@ int res_init(void);
 
 /* Private Function Prototypes */
 static int initialize();
-static int connect_socks(int, struct sockaddr_in *, struct sockaddr_in *);
+static int connect_socks(int, struct sockaddr_in *, struct sockaddr_in *, int);
 static int connect_socksv4(int, struct sockaddr_in *, struct sockaddr_in *);
 static int connect_socksv5(int, struct sockaddr_in *, struct sockaddr_in *);
 
@@ -137,7 +138,6 @@ CONNECT_FUNCTION
 
 	/* Only try and use socks if the socket is an INET socket, */
 	/* and is a TCP stream                                     */
-	/* socks server in the config was valid                    */
 	if ((connaddr->sin_family == AF_INET) &&
 	    (sock_type == SOCK_STREAM)) {
 
@@ -151,7 +151,7 @@ CONNECT_FUNCTION
 			return(realconnect(__fd, __addr, __len));
 
 		/* Ok, so its not local, we need a path to the net */
-		pick_server(&path, &connaddr->sin_addr);
+		pick_server(&path, &connaddr->sin_addr, ntohs(connaddr->sin_port));
 						
 		if (path->address == NULL) {
 			if (path == &defaultserver) 
@@ -168,12 +168,12 @@ CONNECT_FUNCTION
 					   path->lineno);
 		} else if ((res = resolve_ip(path->address, 0, HOSTNAMES)) == -1) {
 			show_error("The SOCKS server (%s) in configuration "
-				   "file is invalid\n", path->address);
+				        "file is invalid\n", path->address);
 		} else {	
 			/* Construct the addr for the socks server */
 			server_address.sin_family = AF_INET; /* host byte order */
 			server_address.sin_addr.s_addr = res;
-			server_address.sin_port = path->port;
+			server_address.sin_port = htons(path->port);
 			bzero(&(server_address.sin_zero), 8);
 
 			/* Complain if this server isn't on a localnet */
@@ -187,14 +187,15 @@ CONNECT_FUNCTION
 		if (res == -1)  
 			return(realconnect(__fd, __addr, __len));
 		else
-			return(connect_socks(__fd, connaddr, &server_address));
+			return(connect_socks(__fd, connaddr, &server_address, path->type));
 	} else {
 		return(realconnect(__fd, __addr, __len));
 	} 
 
 }
 
-static int connect_socks(int sockid, struct sockaddr_in *connaddr, struct sockaddr_in *serveraddr) {
+static int connect_socks(int sockid, struct sockaddr_in *connaddr, 
+                         struct sockaddr_in *serveraddr, int type) {
 	int rc = 0, rerrno = 0;
 	int sockflags;
 	
@@ -209,7 +210,7 @@ static int connect_socks(int sockid, struct sockaddr_in *connaddr, struct sockad
 		fcntl(sockid, F_SETFL, sockflags & (~(O_NONBLOCK)));
 	}
 
-	if (defaultserver.type == 4) 
+	if (type == 4) 
 		rc = connect_socksv4(sockid, connaddr, serveraddr);
 	else
 		rc = connect_socksv5(sockid, connaddr, serveraddr);

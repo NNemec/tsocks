@@ -1,4 +1,4 @@
-tsocks 1.7- Provide transparent SOCKS support
+tsocks 1.8- Provide transparent SOCKS support
 
 tsocks provides transparent network access through a SOCKS proxy. This
 is common in firewalled LAN environments where all connections to the

@@ -1,3 +1,8 @@
+version 1.80Beta - 2002.1.12 delius@progsoc.uts.edu.au
+   Allow choice of SOCKS server by port number (based on 
+      suggestions from Joakim Recht)
+   Fix bugs with error logging (reported by Paul Pot)
+
 version 1.70Beta4 - 2001.7.11 delius@progsoc.uts.edu.au
 	References to verifyconf fixed to point to validateconf
 
