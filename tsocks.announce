@@ -8,5 +8,6 @@ and determines if they can be directly accessed or need the SOCKS server.
 If they need the SOCKS server they connection is negotiated with the
 server transparently to the application. This allows existing applications
 to use SOCKS without recompilation or modification. tsocks is a wrapper
-library for the libc connect() call. Essentially it's the eqivalent of the
-socksified winsock.dll libraries that are available for windows.
+library for a number of socket networking functions.  Essentially it's the 
+eqivalent of the socksified winsock.dll libraries that are available for 
+Windows.

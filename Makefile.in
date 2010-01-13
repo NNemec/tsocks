@@ -10,16 +10,18 @@ infodir = @infodir@
 mandir = @mandir@
 includedir = @includedir@
 
+SHELL = /bin/sh
+MKINSTALLDIRS = ${SHELL} mkinstalldirs 
 SHCC = ${CC} -fPIC 
-INSPECT=inspectsocks
-SAVE=saveme
-LIB_NAME=libtsocks
-COMMON=common
-PARSER=parser
-VALIDATECONF=validateconf
-SHLIB_MAJOR=1
-SHLIB_MINOR=8
-SHLIB=${LIB_NAME}.so.${SHLIB_MAJOR}.${SHLIB_MINOR}
+INSPECT = inspectsocks
+SAVE = saveme
+LIB_NAME = libtsocks
+COMMON = common
+PARSER = parser
+VALIDATECONF = validateconf
+SHLIB_MAJOR = 1
+SHLIB_MINOR = 8
+SHLIB = ${LIB_NAME}.so.${SHLIB_MAJOR}.${SHLIB_MINOR}
 
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -37,16 +39,16 @@ TARGETS= ${SHLIB} ${UTIL_LIB} ${SAVE} ${INSPECT} ${VALIDATECONF}
 all: ${TARGETS}
 
 ${VALIDATECONF}: ${VALIDATECONF}.c ${COMMON}.o ${PARSER}.o
-	${SHCC} ${CFLAGS} ${LIBS} ${INCLUDES} -o ${VALIDATECONF} ${VALIDATECONF}.c ${COMMON}.o ${PARSER}.o
+	${SHCC} ${CFLAGS} ${INCLUDES} -o ${VALIDATECONF} ${VALIDATECONF}.c ${COMMON}.o ${PARSER}.o ${LIBS}
 
 ${INSPECT}: ${INSPECT}.c ${COMMON}.o
-	${SHCC} ${CFLAGS} ${LIBS} ${INCLUDES} -o ${INSPECT} ${INSPECT}.c ${COMMON}.o
+	${SHCC} ${CFLAGS} ${INCLUDES} -o ${INSPECT} ${INSPECT}.c ${COMMON}.o ${LIBS} 
 
 ${SAVE}: ${SAVE}.c
 	${SHCC} ${CFLAGS} ${INCLUDES} -static -o ${SAVE} ${SAVE}.c
 
 ${SHLIB}: ${OBJS} ${COMMON}.o ${PARSER}.o
-	${SHCC} ${CFLAGS} ${SPECIALLIBS} ${LIBS} ${INCLUDES} -nostdlib -shared -o ${SHLIB} ${OBJS} ${COMMON}.o ${PARSER}.o ${DYNLIB_FLAGS}
+	${SHCC} ${CFLAGS} ${INCLUDES} -nostdlib -shared -o ${SHLIB} ${OBJS} ${COMMON}.o ${PARSER}.o ${DYNLIB_FLAGS} ${SPECIALLIBS} ${LIBS}
 	ln -sf ${SHLIB} ${LIB_NAME}.so
 
 %.so: %.c
@@ -58,19 +60,16 @@ ${SHLIB}: ${OBJS} ${COMMON}.o ${PARSER}.o
 install: ${TARGETS} installlib installman
 
 installlib:
-	${INSTALL} ${STATICLIB} ${SHLIB} ${libdir}
-	ln -sf ${SHLIB} ${libdir}/${LIB_NAME}.so.${SHLIB_MAJOR}
-	ln -sf ${LIB_NAME}.so.${SHLIB_MAJOR} ${libdir}/${LIB_NAME}.so
+	${MKINSTALLDIRS} "${DESTDIR}${libdir}"
+	${INSTALL} ${STATICLIB} ${SHLIB} ${DESTDIR}${libdir}
+	ln -sf ${SHLIB} ${DESTDIR}${libdir}/${LIB_NAME}.so.${SHLIB_MAJOR}
+	ln -sf ${LIB_NAME}.so.${SHLIB_MAJOR} ${DESTDIR}${libdir}/${LIB_NAME}.so
 
 installman:
-	if [ ! -d "${mandir}/man8" ] ; then \
-		${INSTALL} -o root -g root -d ${mandir}/man8; \
-	fi;
-	${INSTALL_DATA} -o root -g root tsocks.8 ${mandir}/man8/
-	if [ ! -d "${mandir}/man5" ] ; then \
-		${INSTALL} -o root -g root -d ${mandir}/man5; \
-	fi;
-	${INSTALL_DATA} -o root -g root tsocks.conf.5 ${mandir}/man5/
+	${MKINSTALLDIRS} "${DESTDIR}${mandir}/man8"
+	${INSTALL_DATA} tsocks.8 ${DESTDIR}${mandir}/man8/
+	${MKINSTALLDIRS} "${DESTDIR}${mandir}/man5"
+	${INSTALL_DATA} tsocks.conf.5 ${DESTDIR}${mandir}/man5/
 	
 clean:
 	-rm -f *.so *.so.* *.o *~ ${TARGETS}

@@ -23,7 +23,7 @@
 */
 
 /* Global configuration variables */ 
-char *progname = "validateconf: ";	   /* Name for error msgs      */
+char *progname = "validateconf";	      /* Name for error msgs      */
 
 /* Header Files */
 #include <config.h>
@@ -39,19 +39,20 @@ char *progname = "validateconf: ";	   /* Name for error msgs      */
 #include <common.h>
 #include <parser.h>
 
-void show_server(struct serverent *, int);
-void show_conf();
-void test_host(char *);
+void show_server(struct parsedfile *, struct serverent *, int);
+void show_conf(struct parsedfile *config);
+void test_host(struct parsedfile *config, char *);
 
 int main(int argc, char *argv[]) {
 	char *usage = "Usage: [-f conf file] [-t hostname/ip[:port]]"; 
 	char *filename = NULL;
 	char *testhost = NULL;
+   struct parsedfile config;
 	int i;
 
 	if ((argc > 5) || (((argc - 1) % 2) != 0)) {
-		show_error("Invalid number of arguments\n");
-		show_error("%s\n", usage);
+		show_msg(MSGERR, "Invalid number of arguments\n");
+		show_msg(MSGERR, "%s\n", usage);
 		exit(1);
 	}
 
@@ -61,8 +62,8 @@ int main(int argc, char *argv[]) {
 		} else if (!strcmp(argv[i], "-t")) {
 			testhost = argv[(i + 1)];
 		} else {
-			show_error("Unknown option %s\n", argv[i]);
-			show_error("%s\n", usage);
+			show_msg(MSGERR, "Unknown option %s\n", argv[i]);
+			show_msg(MSGERR, "%s\n", usage);
 			exit(1);
 		}
 	}
@@ -71,7 +72,7 @@ int main(int argc, char *argv[]) {
 		filename = strdup(CONF_FILE);
 
 	printf("Reading configuration file %s...\n", filename);
-	if (read_config(filename) == 0)
+	if (read_config(filename, &config) == 0)
 		printf("... Read complete\n\n");
 	else 
 		exit(1);
@@ -79,14 +80,14 @@ int main(int argc, char *argv[]) {
 	/* If they specified a test host, test it, otherwise */
 	/* dump the configuration                            */
 	if (!testhost)
-		show_conf();
+		show_conf(&config);
 	else
-		test_host(testhost);
+		test_host(&config, testhost);
 	
 	return(0);  
 }
 
-void test_host(char *host) { 
+void test_host(struct parsedfile *config, char *host) { 
 	struct in_addr hostaddr;
 	struct serverent *path;
    char *hostname, *port;
@@ -107,26 +108,30 @@ void test_host(char *host) {
 		return;
 	} else {
 		printf("Finding path for %s...\n", inet_ntoa(hostaddr));
-		pick_server(&path, &hostaddr, portno);
-		if (path == &defaultserver) {
-			printf("Path is via default server:\n");
-			show_server(path, 1);
-		} else {
-			printf("Host is reached via this path:\n");
-			show_server(path, 0);
-		}
+      if (!(is_local(config, &(hostaddr)))) {
+         printf("Path is local\n");
+      } else {
+         pick_server(config, &path, &hostaddr, portno);
+         if (path == &(config->defaultserver)) {
+            printf("Path is via default server:\n");
+            show_server(config, path, 1);
+         } else {
+            printf("Host is reached via this path:\n");
+            show_server(config, path, 0);
+         }
+      }
 	}
 
 	return;
 }
 
-void show_conf() {
+void show_conf(struct parsedfile *config) {
 	struct netent *net;
 	struct serverent *server;
 
 	/* Show the local networks */
 	printf("=== Local networks (no socks server needed) ===\n");
-	net = localnets;
+	net = (config->localnets);
 	while (net != NULL) {
 		printf("Network: %15s ",
 		       inet_ntoa(net->localip));
@@ -138,8 +143,8 @@ void show_conf() {
 
 	/* If we have a default server configuration show it */
 	printf("=== Default Server Configuration ===\n");
-	if (defaultserver.address != NULL) {
-		show_server(&defaultserver, 1);
+	if ((config->defaultserver).address != NULL) {
+		show_server(config, &(config->defaultserver), 1);
 	} else {
 		printf("No default server specified, this is rarely a "
 		       "good idea\n");
@@ -147,12 +152,12 @@ void show_conf() {
 	printf("\n");
 
 	/* Now show paths */
-	if (paths != NULL) {
-		server = paths;
+	if ((config->paths) != NULL) {
+		server = (config->paths);
 		while (server != NULL) {
 			printf("=== Path (line no %d in configuration file)"
 			       " ===\n", server->lineno);
-			show_server(server, 0);
+			show_server(config, server, 0);
 			printf("\n");
 			server = server->next;
 		}	
@@ -161,7 +166,7 @@ void show_conf() {
 	return;
 }
 
-void show_server(struct serverent *server, int def) {
+void show_server(struct parsedfile *config, struct serverent *server, int def) {
 	struct in_addr res;
 	struct netent *net;
 
@@ -176,7 +181,7 @@ void show_server(struct serverent *server, int def) {
 
 	/* Check the server is on a local net */
 	if ((server->address != NULL) && (res.s_addr != -1) && 
-	    (is_local(&res))) 
+	    (is_local(config, &res))) 
 		fprintf(stderr, "Error: Server is not on a network "
 				"specified as local\n");
 

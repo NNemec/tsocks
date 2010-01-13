@@ -15,42 +15,36 @@
 #include "common.h"
 #include "parser.h"
 
-/* Variables provided by parser module */
-struct netent *localnets = NULL;
-struct serverent defaultserver;
-struct serverent *paths = NULL;
-
 /* Global configuration variables */
 #define MAXLINE         BUFSIZ             /* Max length of conf line  */
 static struct serverent *currentcontext = NULL;
 
-int read_config(char *);
-int is_local(struct in_addr *);
-static int handle_line(char *, int);
+static int handle_line(struct parsedfile *, char *, int);
 static int check_server(struct serverent *);
 static int tokenize(char *, int, char *[]);
-static int handle_path(int, int, char *[]);
-static int handle_endpath(int, int, char *[]);
-static int handle_reaches(int, char *);
-static int handle_server(int, char *);
-static int handle_type(int, char *);
-static int handle_port(int, char *);
-static int handle_local(int, char *);
-static int handle_defuser(int, char *);
-static int handle_defpass(int, char *);
-static void reset_serverent(struct serverent *);
+static int handle_path(struct parsedfile *, int, int, char *[]);
+static int handle_endpath(struct parsedfile *, int, int, char *[]);
+static int handle_reaches(struct parsedfile *, int, char *);
+static int handle_server(struct parsedfile *, int, char *);
+static int handle_type(struct parsedfile *config, int, char *);
+static int handle_port(struct parsedfile *config, int, char *);
+static int handle_local(struct parsedfile *, int, char *);
+static int handle_defuser(struct parsedfile *, int, char *);
+static int handle_defpass(struct parsedfile *, int, char *);
 static int make_netent(char *value, struct netent **ent);
 
-int read_config (char *filename) {
+int read_config (char *filename, struct parsedfile *config) {
 	FILE *conf;
 	char line[MAXLINE];
 	int rc = 0;
 	int lineno = 1;
 	struct serverent *server;
 
-	/* Initialize important structures */
-        reset_serverent(&defaultserver);
-        currentcontext = &defaultserver;
+   /* Clear out the structure */
+   memset(config, 0x0, sizeof(*config));
+
+	/* Initialization */
+   currentcontext = &(config->defaultserver);
 
 	/* If a filename wasn't provided, use the default */
 	if (filename == NULL) {
@@ -62,29 +56,29 @@ int read_config (char *filename) {
 
 	/* Read the configuration file */
 	if ((conf = fopen(filename, "r")) == NULL) {
-		show_error("Could not open socks configuration file "
+		show_msg(MSGERR, "Could not open socks configuration file "
 			   "(%s)\n", filename);
 		rc = 1; /* Severe errors reading configuration */
 	}	
 	else {
-		reset_serverent(&defaultserver);
+      memset(&(config->defaultserver), 0x0, sizeof(config->defaultserver));
 
 		while (NULL != fgets(line, MAXLINE, conf)) {
 			/* This line _SHOULD_ end in \n so we  */
 			/* just chop off the \n and hand it on */
 			if (strlen(line) > 0)
 				line[strlen(line) - 1] = '\0';
-			handle_line(line, lineno);
+			handle_line(config, line, lineno);
 			lineno++;
 		} 
 		fclose(conf);
 
 		/* Always add the 127.0.0.1/255.0.0.0 subnet to local */
-		handle_local(0, "127.0.0.0/255.0.0.0");
+		handle_local(config, 0, "127.0.0.0/255.0.0.0");
 
 		/* Check default server */
-		check_server(&defaultserver);
-		server = paths;
+		check_server(&(config->defaultserver));
+		server = (config->paths);
 		while (server != NULL) {
 			check_server(server);
 			server = server->next;
@@ -113,7 +107,7 @@ static int check_server(struct serverent *server) {
 
 
 
-static int handle_line(char *line, int lineno) {
+static int handle_line(struct parsedfile *config, char *line, int lineno) {
 	char *words[10];
 	static char savedline[MAXLINE];
 	int   nowords = 0, i;
@@ -134,31 +128,31 @@ static int handle_line(char *line, int lineno) {
 		/* ender, otherwise it has to be a pair (<name> =   */
 		/* <value>)                                         */
 		if (!strcmp(words[0], "path")) {
-			handle_path(lineno, nowords, words);
+			handle_path(config, lineno, nowords, words);
 		} else if (!strcmp(words[0], "}")) {
-			handle_endpath(lineno, nowords, words);
+			handle_endpath(config, lineno, nowords, words);
 		} else {
 			/* Has to be a pair */
 			if ((nowords != 3) || (strcmp(words[1], "="))) {
-				show_error("Malformed configuration pair "
+				show_msg(MSGERR, "Malformed configuration pair "
 					   "on line %d in configuration "
 					   "file, \"%s\"\n", lineno, savedline);
 			} else if (!strcmp(words[0], "reaches")) {
-				handle_reaches(lineno, words[2]);
+				handle_reaches(config, lineno, words[2]);
 			} else if (!strcmp(words[0], "server")) {
-				handle_server(lineno, words[2]);
+				handle_server(config, lineno, words[2]);
 			} else if (!strcmp(words[0], "server_port")) {
-				handle_port(lineno, words[2]);
+				handle_port(config, lineno, words[2]);
 			} else if (!strcmp(words[0], "server_type")) {
-				handle_type(lineno, words[2]);
+				handle_type(config, lineno, words[2]);
 			} else if (!strcmp(words[0], "default_user")) {
-				handle_defuser(lineno, words[2]);
+				handle_defuser(config, lineno, words[2]);
 			} else if (!strcmp(words[0], "default_pass")) {
-				handle_defpass(lineno, words[2]);
+				handle_defpass(config, lineno, words[2]);
 			} else if (!strcmp(words[0], "local")) {
-				handle_local(lineno, words[2]);
+				handle_local(config, lineno, words[2]);
 			} else {
-				show_error("Invalid pair type (%s) specified "
+				show_msg(MSGERR, "Invalid pair type (%s) specified "
 					   "on line %d in configuration file, "
 					   "\"%s\"\n", words[0], lineno, 
 					   savedline);
@@ -176,9 +170,9 @@ static int tokenize(char *line, int arrsize, char *tokens[]) {
 	int tokenno = -1;
 	int finished = 0;
 
-	/* Strip any whitespace from the start of the string */
-	line = line + strspn(line, " \t");
+	/* Whitespace is ignored before and after tokens     */
 	while ((tokenno < (arrsize - 1)) && 
+          (line = line + strspn(line, " \t")) &&
 	       (*line != (char) 0) && 
 	       (!finished)) {
 		tokenno++;
@@ -197,17 +191,17 @@ static int tokenize(char *line, int arrsize, char *tokens[]) {
 	return(tokenno + 1);
 }
 
-static int handle_path(int lineno, int nowords, char *words[]) {
+static int handle_path(struct parsedfile *config, int lineno, int nowords, char *words[]) {
 	struct serverent *newserver;
 
 	if ((nowords != 2) || (strcmp(words[1], "{"))) {
-		show_error("Badly formed path open statement on line %d "
+		show_msg(MSGERR, "Badly formed path open statement on line %d "
 			   "in configuration file (should look like " 
 			   "\"path {\")\n", lineno);
-	} else if (currentcontext != &defaultserver) {
+	} else if (currentcontext != &(config->defaultserver)) {
 		/* You cannot nest path statements so check that */
 		/* the current context is defaultserver          */
-		show_error("Path statements cannot be nested on line %d "
+		show_msg(MSGERR, "Path statements cannot be nested on line %d "
 			   "in configuration file\n", lineno);
 	} else {
 		/* Open up a new serverent, put it on the list   */
@@ -216,24 +210,26 @@ static int handle_path(int lineno, int nowords, char *words[]) {
 			exit(-1);	
 	
 		/* Initialize the structure */
-		reset_serverent(newserver);
-		newserver->next = paths;
+      show_msg(MSGDEBUG, "New server structure from line %d in configuration file going "
+               "to 0x%08x\n", lineno, newserver);
+      memset(newserver, 0x0, sizeof(*newserver));
+		newserver->next = config->paths;
 		newserver->lineno = lineno;
-		paths = newserver;
+		config->paths = newserver;
 		currentcontext = newserver;
 	}		
  
 	return(0);
 }
 
-static int handle_endpath(int lineno, int nowords, char *words[]) {
+static int handle_endpath(struct parsedfile *config, int lineno, int nowords, char *words[]) {
 
 	if (nowords != 1) {
-		show_error("Badly formed path close statement on line "
+		show_msg(MSGERR, "Badly formed path close statement on line "
 			   "%d in configuration file (should look like "
 			   "\"}\")\n", lineno);
 	} else {
-		currentcontext = &defaultserver;
+		currentcontext = &(config->defaultserver);
 	}
 
 	/* We could perform some checking on the validty of data in */
@@ -243,53 +239,53 @@ static int handle_endpath(int lineno, int nowords, char *words[]) {
 	return(0);
 }
 
-static int handle_reaches(int lineno, char *value) {
+static int handle_reaches(struct parsedfile *config, int lineno, char *value) {
 	int rc;
 	struct netent *ent;
 
 	rc = make_netent(value, &ent);
 	switch(rc) {
 		case 1:
-			show_error("Local network specification (%s) is not validly "
+			show_msg(MSGERR, "Local network specification (%s) is not validly "
 				   "constructed in reach statement on line "
 				   "%d in configuration "
 				   "file\n", value, lineno);
 			return(0);
 			break;
 		case 2:
-			show_error("IP in reach statement "
+			show_msg(MSGERR, "IP in reach statement "
 				   "network specification (%s) is not valid on line "
 				   "%d in configuration file\n", value, lineno);
 			return(0);
 			break;
 		case 3:
-			show_error("SUBNET in reach statement " 
+			show_msg(MSGERR, "SUBNET in reach statement " 
 				   "network specification (%s) is not valid on "
 				   "line %d in configuration file\n", value, 
 				   lineno);
 			return(0);
 			break;
 		case 4:
-			show_error("IP (%s) & ", inet_ntoa(ent->localip));
-			show_error("SUBNET (%s) != IP on line %d in "
+			show_msg(MSGERR, "IP (%s) & ", inet_ntoa(ent->localip));
+			show_msg(MSGERR, "SUBNET (%s) != IP on line %d in "
 				   "configuration file, ignored\n",
 				   inet_ntoa(ent->localnet), lineno);
 			return(0);
          break;
 		case 5:
-			show_error("Start port in reach statement "
+			show_msg(MSGERR, "Start port in reach statement "
                     "network specification (%s) is not valid on line "
                     "%d in configuration file\n", value, lineno);
 			return(0);
 			break;
 		case 6:
-			show_error("End port in reach statement "
+			show_msg(MSGERR, "End port in reach statement "
                     "network specification (%s) is not valid on line "
                     "%d in configuration file\n", value, lineno);
 			return(0);
 			break;
 		case 7:
-			show_error("End port in reach statement "
+			show_msg(MSGERR, "End port in reach statement "
                     "network specification (%s) is less than the start "
                     "port on line %d in configuration file\n", value, 
                     lineno);
@@ -304,7 +300,7 @@ static int handle_reaches(int lineno, char *value) {
 	return(0);
 }
 
-static int handle_server(int lineno, char *value) {
+static int handle_server(struct parsedfile *config, int lineno, char *value) {
 	char *ip;
 
 	ip = strsplit(NULL, &value, " ");
@@ -314,13 +310,13 @@ static int handle_server(int lineno, char *value) {
 	if (currentcontext->address == NULL) 
 		currentcontext->address = strdup(ip);
 	else {
-		if (currentcontext == &defaultserver) 
-			show_error("Only one default SOCKS server "
+		if (currentcontext == &(config->defaultserver)) 
+			show_msg(MSGERR, "Only one default SOCKS server "
 				   "may be specified at line %d in "
 				   "configuration file\n", lineno);
 		else 
-			show_error("Only one SOCKS server may be specified "
-				   "per path on lin %d in configuration "
+			show_msg(MSGERR, "Only one SOCKS server may be specified "
+				   "per path on line %d in configuration "
 				   "file. (Path begins on line %d)\n",
 				   lineno, currentcontext->lineno);
 	}
@@ -328,15 +324,15 @@ static int handle_server(int lineno, char *value) {
 	return(0);
 }
 
-static int handle_port(int lineno, char *value) {
+static int handle_port(struct parsedfile *config, int lineno, char *value) {
 
 	if (currentcontext->port != 0) {
-		if (currentcontext == &defaultserver) 
-			show_error("Server port may only be specified "
+		if (currentcontext == &(config->defaultserver)) 
+			show_msg(MSGERR, "Server port may only be specified "
 				   "once for default server, at line %d "
 				   "in configuration file\n", lineno);
 		else 
-			show_error("Server port may only be specified "
+			show_msg(MSGERR, "Server port may only be specified "
 				   "once per path on line %d in configuration "
 				   "file. (Path begins on line %d)\n",
 				   lineno, currentcontext->lineno);
@@ -345,7 +341,7 @@ static int handle_port(int lineno, char *value) {
 		currentcontext->port = (unsigned short int)
 				  (strtol(value, (char **)NULL, 10));
 		if ((errno != 0) || (currentcontext->port == 0)) {
-			show_error("Invalid server port number "
+			show_msg(MSGERR, "Invalid server port number "
 				   "specified in configuration file "
 				   "(%s) on line %d\n", value, lineno);
 			currentcontext->port = 0;
@@ -355,15 +351,15 @@ static int handle_port(int lineno, char *value) {
 	return(0);
 }
 
-static int handle_defuser(int lineno, char *value) {
+static int handle_defuser(struct parsedfile *config, int lineno, char *value) {
 
 	if (currentcontext->defuser != NULL) {
-		if (currentcontext == &defaultserver) 
-			show_error("Default username may only be specified "
+		if (currentcontext == &(config->defaultserver)) 
+			show_msg(MSGERR, "Default username may only be specified "
 				   "once for default server, at line %d "
 				   "in configuration file\n", lineno);
 		else 
-			show_error("Default username may only be specified "
+			show_msg(MSGERR, "Default username may only be specified "
 				   "once per path on line %d in configuration "
 				   "file. (Path begins on line %d)\n",
 				   lineno, currentcontext->lineno);
@@ -374,15 +370,15 @@ static int handle_defuser(int lineno, char *value) {
 	return(0);
 }
 
-static int handle_defpass(int lineno, char *value) {
+static int handle_defpass(struct parsedfile *config, int lineno, char *value) {
 
 	if (currentcontext->defpass != NULL) {
-		if (currentcontext == &defaultserver) 
-			show_error("Default password may only be specified "
+		if (currentcontext == &(config->defaultserver)) 
+			show_msg(MSGERR, "Default password may only be specified "
 				   "once for default server, at line %d "
 				   "in configuration file\n", lineno);
 		else 
-			show_error("Default password may only be specified "
+			show_msg(MSGERR, "Default password may only be specified "
 				   "once per path on line %d in configuration "
 				   "file. (Path begins on line %d)\n",
 				   lineno, currentcontext->lineno);
@@ -393,15 +389,15 @@ static int handle_defpass(int lineno, char *value) {
 	return(0);
 }
 
-static int handle_type(int lineno, char *value) {
+static int handle_type(struct parsedfile *config, int lineno, char *value) {
 
 	if (currentcontext->type != 0) {
-		if (currentcontext == &defaultserver) 
-			show_error("Server type may only be specified "
+		if (currentcontext == &(config->defaultserver)) 
+			show_msg(MSGERR, "Server type may only be specified "
 				   "once for default server, at line %d "
 				   "in configuration file\n", lineno);
 		else 
-			show_error("Server type may only be specified "
+			show_msg(MSGERR, "Server type may only be specified "
 				   "once per path on line %d in configuration "
 				   "file. (Path begins on line %d)\n",
 				   lineno, currentcontext->lineno);
@@ -410,7 +406,7 @@ static int handle_type(int lineno, char *value) {
 		currentcontext->type = (int) strtol(value, (char **)NULL, 10);
 		if ((errno != 0) || (currentcontext->type == 0) ||
 		    ((currentcontext->type != 4) && (currentcontext->type != 5))) {
-			show_error("Invalid server type (%s) "
+			show_msg(MSGERR, "Invalid server type (%s) "
 				   "specified in configuration file "
 				   "on line %d, only 4 or 5 may be "
 				   "specified\n", value, lineno);
@@ -421,12 +417,12 @@ static int handle_type(int lineno, char *value) {
 	return(0);
 }
 
-static int handle_local(int lineno, char *value) {
+static int handle_local(struct parsedfile *config, int lineno, char *value) {
 	int rc;
 	struct netent *ent;
 
-	if (currentcontext != &defaultserver) {
-		show_error("Local networks cannot be specified in path "
+	if (currentcontext != &(config->defaultserver)) {
+		show_msg(MSGERR, "Local networks cannot be specified in path "
 			   "block at like %d in configuration file. "
 			   "(Path block started at line %d)\n",
 			   lineno, currentcontext->lineno);
@@ -436,34 +432,34 @@ static int handle_local(int lineno, char *value) {
 	rc = make_netent(value, &ent);
 	switch(rc) {
 		case 1:
-			show_error("Local network specification (%s) is not validly "
+			show_msg(MSGERR, "Local network specification (%s) is not validly "
 				   "constructed on line %d in configuration "
 				   "file\n", value, lineno);
 			return(0);
 			break;
 		case 2:
-			show_error("IP for local "
+			show_msg(MSGERR, "IP for local "
 				   "network specification (%s) is not valid on line "
 				   "%d in configuration file\n", value, lineno);
 			return(0);
 			break;
 		case 3:
-			show_error("SUBNET for " 
+			show_msg(MSGERR, "SUBNET for " 
 				   "local network specification (%s) is not valid on "
 				   "line %d in configuration file\n", value, 
 				   lineno);
 			return(0);
 			break;
 		case 4:
-			show_error("IP (%s) & ", inet_ntoa(ent->localip));
-			show_error("SUBNET (%s) != IP on line %d in "
+			show_msg(MSGERR, "IP (%s) & ", inet_ntoa(ent->localip));
+			show_msg(MSGERR, "SUBNET (%s) != IP on line %d in "
 				   "configuration file, ignored\n",
 				   inet_ntoa(ent->localnet), lineno);
 			return(0);
 		case 5:
 		case 6:
 		case 7:
-			show_error("Port specification is invalid and "
+			show_msg(MSGERR, "Port specification is invalid and "
 				   "not allowed in local network specification "
                "(%s) on line %d in configuration file\n",
 				   value, lineno);
@@ -472,7 +468,7 @@ static int handle_local(int lineno, char *value) {
 	}
 
    if (ent->startport || ent->endport) {
-      show_error("Port specification is "
+      show_msg(MSGERR, "Port specification is "
             "not allowed in local network specification "
             "(%s) on line %d in configuration file\n",
             value, lineno);
@@ -480,8 +476,8 @@ static int handle_local(int lineno, char *value) {
    }
 
 	/* The entry is valid so add it to linked list */
-	ent -> next = localnets;
-	localnets = ent;
+	ent -> next = config->localnets;
+	(config->localnets) = ent;
 
 	return(0);
 }
@@ -525,6 +521,8 @@ int make_netent(char *value, struct netent **ent) {
       /* If we couldn't malloc some storage, leave */
       exit(1);
    }
+
+   show_msg(MSGDEBUG, "New network entry for %s going to 0x%08x\n", ip, *ent);
 
    if (!startport)
       (*ent)->startport = 0;
@@ -578,23 +576,10 @@ int make_netent(char *value, struct netent **ent) {
 	return(0);
 }
 
-static void reset_serverent(struct serverent *ent) {
-
-	ent->address = NULL;
-	ent->port = 0;
-	ent->type = 0;
-	ent->defuser = (char *) 0;
-	ent->defpass = (char *) 0;
-	ent->reachnets = (struct netent *) 0;
-	ent->lineno = 0;
-	ent->next = (struct serverent *) 0;
-
-}
-
-int is_local(struct in_addr *testip) {
+int is_local(struct parsedfile *config, struct in_addr *testip) {
         struct netent *ent;
 
-	for (ent = localnets; ent != NULL; ent = ent -> next) {
+	for (ent = (config->localnets); ent != NULL; ent = ent -> next) {
 		if ((testip->s_addr & ent->localnet.s_addr) ==
 		    (ent->localip.s_addr & ent->localnet.s_addr))  {
 			return(0);
@@ -605,27 +590,38 @@ int is_local(struct in_addr *testip) {
 }
 
 /* Find the appropriate server to reach an ip */
-int pick_server(struct serverent **ent, struct in_addr *ip, unsigned int port) {
+int pick_server(struct parsedfile *config, struct serverent **ent, 
+                struct in_addr *ip, unsigned int port) {
 	struct netent *net;	
+   char ipbuf[64];
 
-	*ent = paths;
+   show_msg(MSGDEBUG, "Picking appropriate server for %s\n", inet_ntoa(*ip));
+	*ent = (config->paths);
 	while (*ent != NULL) {
 		/* Go through all the servers looking for one */
 		/* with a path to this network                */
+      show_msg(MSGDEBUG, "Checking SOCKS server %s\n", 
+               ((*ent)->address ? (*ent)->address : "(No Address)"));
 		net = (*ent)->reachnets;
 		while (net != NULL) {
+         strcpy(ipbuf, inet_ntoa(net->localip));
+         show_msg(MSGDEBUG, "Server can reach %s/%s\n", 
+                  ipbuf, inet_ntoa(net->localnet));
 			if (((ip->s_addr & net->localnet.s_addr) ==
               (net->localip.s_addr & net->localnet.s_addr)) &&
              (!net->startport || 
               ((net->startport <= port) && (net->endport >= port))))  
+         {
+            show_msg(MSGDEBUG, "This server can reach target\n");
 				/* Found the net, return */
 				return(0);
+         }
 			net = net->next;
 		}		
 		(*ent) = (*ent)->next;
 	}
 
-	*ent = &defaultserver;
+	*ent = &(config->defaultserver);
 
 	return(0);
 }

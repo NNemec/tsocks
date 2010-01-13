@@ -11,8 +11,16 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+
+/* Globals */
+int loglevel = MSGERR;    /* The default logging level is to only log
+                             error messages */
+char logfilename[256];    /* Name of file to which log messages should
+                             be redirected */
+FILE *logfile = NULL;     /* File to which messages should be logged */
 
 unsigned int resolve_ip(char *host, int showmsg, int allownames) {
 	struct hostent *new;
@@ -42,38 +50,61 @@ unsigned int resolve_ip(char *host, int showmsg, int allownames) {
 	return (hostaddr);
 }
 
-void show_error(char *fmt, ...) {
+/* Set logging options, the options are as follows:             */
+/*  level - This sets the logging threshold, messages with      */
+/*          a higher level (i.e lower importance) will not be   */
+/*          output. For example, if the threshold is set to     */
+/*          MSGWARN a call to log a message of level MSGDEBUG   */
+/*          would be ignored. This can be set to -1 to disable  */
+/*          messages entirely                                   */
+/*  filename - This is a filename to which the messages should  */
+/*             be logged instead of to standard error           */
+void set_log_options(int level, char *filename) {
+
+   loglevel = level;
+   if (loglevel < MSGERR)
+      loglevel = MSGNONE;
+
+   if (filename) {
+      strncpy(logfilename, filename, sizeof(logfilename));
+      logfilename[sizeof(logfilename) - 1] = '\0';
+   }
+}
+
+void show_msg(int level, char *fmt, ...) {
 	va_list ap;
 	int saveerr;
-	char *newfmt;
 	extern char *progname;
 
-	/* If --disable-debug was specified at compile time or */
-	/* TSOCKS_NO_DEBUG is set to 'yes' in the enviroment   */
-	/* don't actually display this message                 */
-	if ((getenv("TSOCKS_NO_DEBUG")) &&
-	    (!strcmp(getenv("TSOCKS_NO_DEBUG"), "yes")))
-		return;
+   if ((loglevel == MSGNONE) || (level > loglevel))
+      return;
 
-	if ((newfmt = malloc(strlen(fmt) + strlen(progname) + 1)) == NULL) {
-		/* Could not malloc, bail */
-		exit(1);
-	}
+   if (!logfile) {
+      if (logfilename[0]) {
+         logfile = fopen(logfilename, "a");
+         if (logfile == NULL) {
+            logfile = stderr;
+            show_msg(MSGERR, "Could not open log file, %s, %s\n", 
+                     logfilename, strerror(errno));
+         }
+      } else
+         logfile = stderr;
+   }
+
+   fputs(progname, logfile);
+   fputs(": ", logfile);
 	
-	strcpy(newfmt, progname);
-	strcpy(newfmt + strlen(progname), fmt);
-
 	va_start(ap, fmt);
 
 	/* Save errno */
 	saveerr = errno;
 
-	vfprintf(stderr, newfmt, ap);
+	vfprintf(logfile, fmt, ap);
 	
+   fflush(logfile);
+
 	errno = saveerr;
 
 	va_end(ap);
-
-	free(newfmt);
 }
 

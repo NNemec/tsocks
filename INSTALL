@@ -39,6 +39,15 @@ achieved that)
 Other standard autoconf options are provided by typing './configure
 --help'
 
+NOTE: The install path for the library is _NOT_ prefixed with 
+--prefix, this is because it is strongly recommended that tsocks
+is installed into /lib (and not /usr/lib). This is important if 
+tsocks is put into /etc/ld.so.preload since /usr is not mounted 
+on many systems at boot time, meaning that programs running before
+/usr is mounted will try to preload tsocks, fail to find it and 
+die, making the machine unusable. If you really wish to install
+the library into some other path use --libdir.
+
 3. Compile the code by typing:
 
 	make

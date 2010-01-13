@@ -65,6 +65,9 @@ AC_CHECK_HEADER(arpa/inet.h,,AC_MSG_ERROR("arpa/inet.h not found"))
 dnl Check for the fcntl header
 AC_CHECK_HEADER(fcntl.h,,AC_MSG_ERROR("fcntl.h not found"))
 
+dnl Check for the poll header
+AC_CHECK_HEADER(sys/poll.h,,AC_MSG_ERROR("sys/poll.h not found"))
+
 dnl Other headers we're interested in
 AC_CHECK_HEADERS(unistd.h)
 
@@ -72,11 +75,31 @@ dnl Checks for library functions.
 AC_CHECK_FUNCS(strcspn strdup strerror strspn strtol,,[ 
 	       AC_MSG_ERROR("Required function not found")])
 
+dnl First find the library that contains connect() (obviously
+dnl the most important library for us). Once we've found it
+dnl we chuck it on the end of LIBS, that lib may end up there
+dnl more than once (since we do our search with an empty libs
+dnl list) but that isn't a problem
+OLDLIBS="${LIBS}"
+LIBS=
+CONNECTLIB=
+for LIB in c socket; do
+  AC_CHECK_LIB("${LIB}",connect,[
+    CONNECTLIB="${LIB}"
+    break
+  ],)
+done
+LIBS="${OLDLIBS} -l${CONNECTLIB}"
+if test "${CONNECTLIB}" = ""; then
+  AC_MSG_ERROR('Could not find library containing connect()')
+fi
+
 dnl Check for socket
 AC_CHECK_FUNC(socket,, [
   AC_CHECK_LIB(socket, socket,,AC_MSG_ERROR("socket function not found"))])
 
-dnl Check for inet_aton here
+dnl Check for a function to convert an ascii ip address
+dnl to a sin_addr. 
 AC_CHECK_FUNC(inet_aton, AC_DEFINE(HAVE_INET_ATON), [
   AC_CHECK_FUNC(inet_addr, AC_DEFINE(HAVE_INET_ADDR), [
     AC_CHECK_LIB(nsl, inet_addr, [ AC_DEFINE(HAVE_INET_ADDR)
@@ -139,7 +162,7 @@ if test "${enable_oldmethod}" = "yes"; then
 fi
 
 if test "x${enable_debug}" = "x"; then
-  AC_DEFINE(DEBUG)
+  AC_DEFINE(ALLOW_MSG_OUTPUT)
 fi
 
 if test "x${enable_hostnames}" = "x"; then
@@ -152,57 +175,118 @@ if test "${enable_socksdns}" = "yes" -a \
 fi
 
 dnl If we have to use the old method of overriding connect (i.e no
-dnl RTLD_NEXT) we need to know the location of libc, so we call
-dnl ldd to list the dependancies of /bin/ls and look for libc. 
-if test "${oldmethod}" = "yes"; then
-  dnl Check that an awk is available, sets AWK
-  AC_PROG_AWK
+dnl RTLD_NEXT) we need to know the location of the library that
+dnl contains connect()
+if test "${oldmethod}" = "yes"; then 
+  dnl We need to find the path to the library, to do 
+  dnl this we use find on the usual suspects, i.e /lib and
+  dnl /usr/lib
 
-  dnl Find grep, it should always be somewhere in the path
+  dnl Check that find is available, it should be somehere
+  dnl in the path 
+  AC_CHECK_PROG(FIND, find, find)
+  if test "${FIND}" = ""; then
+    AC_MSG_ERROR('find not found in path')
+  fi
+
+  dnl Find tail, it should always be somewhere in the path
   dnl but for safety's sake
-  AC_CHECK_PROG(GREP, grep, grep)
+  AC_CHECK_PROG(TAIL, tail, tail)
+  if test "${TAIL}" = ""; then
+    AC_MSG_ERROR('tail not found in path')
+  fi
 
-  dnl Look for ldd, it should always be in the path too
-  AC_CHECK_PROG(LDD, ldd, ldd)
+  dnl Now find the library we need
+  AC_MSG_CHECKING("location of lib${CONNECTLIB}.so")
+  LIBCONNECT=
+  for DIR in '/lib' '/usr/lib'; do
+    if test "${LIBCONNECT}" = ""; then
+      LIBCONNECT=`$FIND $DIR -name "lib${CONNECTLIB}.so.?" 2>/dev/null | $TAIL -1`
+    fi
+  done
 
-  dnl Check location of libc
-  AC_MSG_CHECKING(location of libc)
-  LIBC=`$LDD /bin/ls | $GREP "libc" | $AWK ' { print $3 } '`
+  AC_DEFINE_UNQUOTED(LIBCONNECT, "${LIBCONNECT}")
+  if test "${LIBCONNECT}" = ""; then
+     AC_MSG_ERROR("not found!")
+  fi
 
-  AC_DEFINE_UNQUOTED(LIBC, "${LIBC}")
-  AC_MSG_RESULT($LIBC)
+  AC_MSG_RESULT($LIBCONNECT)
 fi
 
-dnl Check which prototype of connect will work for us
-proto1='(int, __CONST_SOCKADDR_ARG, socklen_t);'
-imp1='(int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len) {'
-proto2='(int, struct sockaddr *, int);'
-imp2='(int __fd, struct sockaddr * __addr, int __len) {'
-proto3='(int, const struct sockaddr *, socklen_t);'
-imp3='(int __fd, const struct sockaddr * __addr, socklen_t __len) {'
-AC_MSG_CHECKING(for correct connect prototype)
-AC_TRY_RUN([
-  #include <sys/socket.h>
-  int connect$proto1
-  int main() {return(0);}
-], [PROTO="$proto1"; IMP="$imp1"; AC_DEFINE(USE_UNION)], [
-  AC_TRY_RUN([
-    #include <sys/socket.h>
-    int connect$proto2
-    int main() {return(0);}
-  ], [PROTO="$proto2"; IMP="$imp2"], [
-    AC_TRY_RUN([
-      #include <sys/socket.h>
-      int connect$proto3
-      int main() {return(0);}
-    ], [PROTO="$proto3"; IMP="$imp3"], PROTO="", PROTO="")
-  ], PROTO="")
-], PROTO="")
-AC_MSG_RESULT($PROTO)
-AC_DEFINE_UNQUOTED(CONNECT_PROTOTYPE, [int connect${PROTO}])
-AC_DEFINE_UNQUOTED(CONNECT_FUNCTION, [int connect${IMP}])
-AC_DEFINE_UNQUOTED(REALCONNECT_PROTOTYPE, [static int (*realconnect)${PROTO}])
+dnl Find the correct select prototype on this machine 
+AC_MSG_CHECKING(for correct select prototype)
+PROTO=
+for testproto in 'int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout' 
+do
+  if test "${PROTO}" = ""; then
+    AC_TRY_COMPILE([
+      #include <sys/time.h>
+      #include <sys/types.h>
+      #include <unistd.h>
+      int select($testproto);
+    ],,[PROTO="$testproto";],)
+  fi
+done
+if test "${PROTO}" = ""; then
+  AC_MSG_ERROR("no match found!")
+fi
+AC_MSG_RESULT([select(${PROTO})])
+AC_DEFINE_UNQUOTED(SELECT_SIGNATURE, [${PROTO}])
 
+dnl Find the correct connect prototype on this machine 
+AC_MSG_CHECKING(for correct connect prototype)
+PROTO=
+PROTO1='int __fd, const struct sockaddr * __addr, int len'
+PROTO2='int __fd, const struct sockaddr_in * __addr, socklen_t __len'
+PROTO3='int __fd, struct sockaddr * __addr, int __len'
+PROTO4='int __fd, const struct sockaddr * __addr, socklen_t __len'
+for testproto in "${PROTO1}" \
+                 "${PROTO2}" \
+                 "${PROTO3}" \
+                 "${PROTO4}" 
+do
+  if test "${PROTO}" = ""; then
+    AC_TRY_COMPILE([
+      #include <sys/socket.h>
+      int connect($testproto);
+    ],,[PROTO="$testproto";],)
+  fi
+done
+if test "${PROTO}" = ""; then
+  AC_MSG_ERROR("no match found!")
+fi
+AC_MSG_RESULT([connect(${PROTO})])
+AC_DEFINE_UNQUOTED(CONNECT_SIGNATURE, [${PROTO}])
+
+dnl Pick which of the sockaddr type arguments we need for
+dnl connect(), we need to cast one of ours to it later 
+SOCKETARG="struct sockaddr *"
+case "${PROTO}" in
+   *sockaddr_in*)
+      SOCKETARG="struct sockaddr_in *"
+      ;;
+esac
+AC_DEFINE_UNQUOTED(CONNECT_SOCKARG, [${SOCKETARG}])
+
+dnl Find the correct poll prototype on this machine 
+AC_MSG_CHECKING(for correct poll prototype)
+PROTO=
+for testproto in 'struct pollfd *ufds, unsigned long nfds, int timeout' 
+do
+  if test "${PROTO}" = ""; then
+    AC_TRY_COMPILE([
+      #include <sys/poll.h>
+      int poll($testproto);
+    ],,[PROTO="$testproto";],)
+  fi
+done
+if test "${PROTO}" = ""; then
+  AC_MSG_ERROR("no match found!")
+fi
+AC_MSG_RESULT([poll(${PROTO})])
+AC_DEFINE_UNQUOTED(POLL_SIGNATURE, [${PROTO}])
+
+dnl Output the special librarys (libdl etc needed for tsocks)
 SPECIALLIBS=${LIBS}
 AC_SUBST(SPECIALLIBS)
 LIBS=${SIMPLELIBS}

@@ -23,7 +23,7 @@
 */
 
 /* Global configuration variables */ 
-char *progname = "inspectsocks: ";	   /* Name for error msgs      */
+char *progname = "inspectsocks";	   /* Name for error msgs      */
 int defaultport	= 1080;			   /* Default SOCKS port       */
 
 /* Header Files */
@@ -53,8 +53,8 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in server;
 
 	if ((argc < 2) || (argc > 3)) {
-		show_error("Invalid number of arguments\n");
-		show_error("%s\n", usage);
+		show_msg(MSGERR, "Invalid number of arguments\n");
+		show_msg(MSGERR, "%s\n", usage);
 		exit(1);
 	}
 
@@ -63,14 +63,14 @@ int main(int argc, char *argv[]) {
 			portno = (unsigned short int)
 				 strtol(argv[2], (char **) 0, 10);
 			if ((portno == 0) || (errno == EINVAL)) {
-				show_error("%s\n", usage);
+				show_msg(MSGERR, "%s\n", usage);
 				exit(1);
 			}
 		case 2:
 			if ((server.sin_addr.s_addr = resolve_ip(argv[1], 1,HOSTNAMES))
                             ==  -1) {
-				show_error("Invalid IP/host specified (%s)\n", argv[1]);
-				show_error("%s\n", usage);
+				show_msg(MSGERR, "Invalid IP/host specified (%s)\n", argv[1]);
+				show_msg(MSGERR, "%s\n", usage);
 				exit(1);
 			}
 	}
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
 			printf("Reply indicates server is a version "
 			       "%d socks server\n", ver);
 		} else {
-			show_error("Invalid SOCKS version reply (%d), "
+			show_msg(MSGERR, "Invalid SOCKS version reply (%d), "
 			       	   "probably not a socks server\n",
 				   ver);
 		}
@@ -119,13 +119,13 @@ int main(int argc, char *argv[]) {
 			printf("Reply indicates server is a version "
 			       "4 socks server\n");
 		} else {
-			show_error("Invalid SOCKS version reply (%d), "
+			show_msg(MSGERR, "Invalid SOCKS version reply (%d), "
 			       	   "probably not a socks server\n",
 				   (int) resp[0]);
 		}
 		exit(0);
 	} else {
-		show_error("Server disconnected, probably not a "
+		show_msg(MSGERR, "Server disconnected, probably not a "
 			   "socks server\n");
 	}
 
@@ -139,7 +139,7 @@ int send_request(struct sockaddr_in *server, void *req,
 
 	if ((sock = socket(server->sin_family, SOCK_STREAM, 0)) < 0)
 	{
-		show_error("Could not create socket (%s)\n",
+		show_msg(MSGERR, "Could not create socket (%s)\n",
 			   strerror(errno));
 		exit(1);
 	}
@@ -147,20 +147,20 @@ int send_request(struct sockaddr_in *server, void *req,
 	if (connect(sock, (struct sockaddr *) server,
 		    sizeof(struct sockaddr_in)) != -1) {
 	} else {
-		show_error("Connect failed! (%s)\n",
+		show_msg(MSGERR, "Connect failed! (%s)\n",
 			   strerror(errno));
 		exit(1);
 	}
 
 	if (send(sock, (void *) req, reqlen,0) < 0) {
-		show_error("Could not send to server (%s)\n",
+		show_msg(MSGERR, "Could not send to server (%s)\n",
 			   strerror(errno));
 		exit(1);
 	}
 
 	/* Now wait for reply */
 	if ((rc = recv(sock, (void *) rep, replen, 0)) < 0) {
-		show_error("Could not read from server\n",
+		show_msg(MSGERR, "Could not read from server\n",
 			   strerror(errno));
 		exit(1);
 	}

@@ -4,7 +4,7 @@
 encountered, this is really important and should only be disabled if
 you're REALLY sure. It can also be turned off at run time, see the man
 page for details */
-#undef DEBUG
+#undef ALLOW_MSG_OUTPUT
 
 /* Use _GNU_SOURCE to define RTLD_NEXT, mostly for RH7 systems */
 #undef USE_GNU_SOURCE
@@ -13,28 +13,30 @@ page for details */
 hopefully shouldn't be needed */
 #undef USE_OLD_DLSYM
 
-/* libc location, needed if USE_OLD_DLSYM is enabled */
-#undef LIBC
+/* path to library containing connect(), needed if USE_OLD_DLSYM is enabled */
+#undef LIBCONNECT
 
 /* Configure the system resolver to use TCP queries on startup, this
 allows socksified DNS */
 #undef USE_SOCKS_DNS
 
 /* Prototype and function header for connect function */
-#undef CONNECT_PROTOTYPE
-#undef CONNECT_FUNCTION
-#undef REALCONNECT_PROTOTYPE
+#undef CONNECT_SIGNATURE
+
+/* The type of socket structure pointer to use to call the 
+ * real connect */
+#undef CONNECT_SOCKARG
+
+/* Prototype and function header for select function */
+#undef SELECT_SIGNATURE
+
+/* Prototype and function header for poll function */
+#undef POLL_SIGNATURE
 
 /* Work out which function we have for conversion from string IPs to 
 numerical ones */
 #undef HAVE_INET_ADDR
 #undef HAVE_INET_ATON
-
-/* Linux (and possibly other systems) use a union (including all the
-different types of sockaddr structures as the argument to connect instead
-of a typical generic sockaddr. We need to read the sockaddr_in from this
-union on those systems */
-#undef USE_UNION
 
 /* We use strsep which isn't on all machines, but we provide our own
 definition of it for those which don't have it, this causes us to define

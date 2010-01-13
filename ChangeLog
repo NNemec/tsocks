@@ -1,3 +1,18 @@
+version 1.80Beta3 - 2002.2.20 delius@progsoc.uts.edu.au
+   A large portion of tsocks has been rewritten
+   Relax parser handling of whitespace, i.e it's ignored
+   Fix validateconf path detection to handle local paths
+   Expand logging/debugging support, can now provide 
+      detailed debugging info to stderr or file)
+   Improve autoconf script, much more robust
+   Default to ECONNREFUSED when no valid server found
+   Support for non-blocking sockets by intercepting 
+      select() and poll()
+   Add support for DESTDIR during make for RPM build, 
+   Don't insist on root.root installation
+   Document the --libdir vs --prefix difference better
+      in INSTALL and tsocks.8
+
 version 1.80Beta2 - 2002.1.19 delius@progsoc.uts.edu.au
    Fix showstopper bug with SOCKS server port numbers
 
@@ -39,9 +54,9 @@ version 1.60 - 2000.7.11 delius@progsoc.uts.edu.au
 	Corrected Solaris support, should now work I hope :)
 	Fixed Makefile problem
 	Fixed localhost issues (127.0.0.0/255.0.0.0 is now automatically
-added as a local network)
+      added as a local network)
 	Removed limitation to number of local nets and reduced memory
-footprint
+      footprint
 	Added inspectsocks utility
 	Added initial support for SOCKS version 5
 	Fixed bad connect return codes
@@ -50,11 +65,11 @@ footprint
 version 1.50 - 2000.5.23 delius@progsoc.uts.edu.au
 	Fixed bug with setsockopt code thanks to Ronnie Misra
 	Added support to force TCP dns lookups (i.e allow socksified
-DNS) thanks to Joris van Rantwijk
+      DNS) thanks to Joris van Rantwijk
 	Properly generate errors for unresolved symbols
 
 version 1.40 - 2000.5.12 delius@progsoc.uts.edu.au
-	Fix Solaris support, should now compile on 5.6,5.7 and 5.8
+	Fix Solaris support, should now compile on 2.6, 7 and 8
 	Fix Makefile problem
 
 version 1.30 - 2000.5.10 delius@progsoc.uts.edu.au
@@ -71,7 +86,7 @@ version 1.10 - 2000.5.3 delius@progsoc.uts.edu.au
 	Provide an INSTALL guide
 	Improved error handling
 	Provide a program to try to save those people who break their
-ld.so.preload file
+      ld.so.preload file
 
 version 1.00 - 2000.5.2 delius@progsoc.uts.edu.au
 	First Release

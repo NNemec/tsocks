@@ -9,13 +9,13 @@
 
 /* Structure representing one server specified in the config */
 struct serverent {
+	int lineno; /* Line number in conf file this path started on */
 	char *address; /* Address/hostname of server */
 	int port; /* Port number of server */
 	int type; /* Type of server (4/5) */
 	char *defuser; /* Default username for this socks server */
 	char *defpass; /* Default password for this socks server */
 	struct netent *reachnets; /* Linked list of nets from this server */
-	int lineno; /* Line number in conf file this path started on */
 	struct serverent *next; /* Pointer to next server entry */
 };
 
@@ -28,15 +28,17 @@ struct netent {
 	struct netent *next; /* Pointer to next network entry */
 };
 
-/* Variables provided by parser module */
-extern struct netent *localnets;
-extern struct serverent defaultserver;
-extern struct serverent *paths;
+/* Structure representing a complete parsed file */
+struct parsedfile {
+   struct netent *localnets;
+   struct serverent defaultserver;
+   struct serverent *paths;
+};
 
 /* Functions provided by parser module */
-int read_config(char *);
-int is_local(struct in_addr *);
-int pick_server(struct serverent **, struct in_addr *, unsigned int port);
+int read_config(char *, struct parsedfile *);
+int is_local(struct parsedfile *, struct in_addr *);
+int pick_server(struct parsedfile *, struct serverent **, struct in_addr *, unsigned int port);
 char *strsplit(char *separator, char **text, const char *search);
 
 #endif
