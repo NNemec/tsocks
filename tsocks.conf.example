@@ -1,0 +1,37 @@
+# This is the configuration for libtsocks (transparent socks V4)
+# Lines beginning with # and blank lines are ignored
+# 
+# You need to specify one SOCKS server and any local subnets that
+# can be connected to directly. For example, if this machine is on 
+# a network where 10. anything can be reached directly but everything else 
+# must go through a SOCKS server on 10.1.4.254, the following
+# configuration file will do just that.
+
+# IP address for server
+server = 10.1.4.254
+
+# If the server isn't a version 4 server, specify that like so, 
+# read the README and 'man tsocks' for documentation of inspectsocks which
+# can help you determine which you have
+server_type = 5;
+
+# If a socks version 5 server requires tsocks to use username and password
+# authentication it will attempt to determine the username first by
+# looking for the environment variable TSOCKS_USERNAME, then this 
+# default user parameter, then the local username. You can ONLY
+# specify this option for version 5 servers
+default_user = shaun
+
+# The password is found in either TSOCKS_PASSWORD or here like above
+default_pass = nopass
+
+# If the server is on a strange port (not 1080) you might want to 
+# specify like so:
+server_port = 1080
+
+# Local subnet declaration (you can have as many of these as you like)
+local = 10.0.0.0/255.0.0.0
+
+# If for example 12.1.0. anything could be reached directly as well, 
+# another local line can be added:
+local = 12.1.0.0/255.255.255.0

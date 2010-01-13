@@ -1,0 +1,162 @@
+.TH TSOCKS 3 "" "Shaun Clowes" \" -*-
+ \" nroff -*
+
+.SH NAME
+tsocks \- 	Library for intercepting outgoing network connections and
+redirecting them through a SOCKS server. 
+
+.SH SYNOPSIS
+
+Set LD_PRELOAD to load the library then use applications as normal
+
+The syntax to force preload of the library for different shells is
+specified below:
+ 
+Bash, Ksh and Bourne shell -
+
+export LD_PRELOAD=/usr/lib/libtsocks.so
+
+C Shell - 
+
+setenv LD_PRELOAD=/usr/lib/libtsocks.so
+
+.SH DESCRIPTION
+
+.BR tsocks
+is a library to allow transparent SOCKS proxying. It wraps the normal
+connect() function. When a connection is attempted, it consults the 
+configuration file (which is defined at compile time but defaults to 
+/etc/tsocks.conf) and determines if the IP address specified is local. If 
+it is not, the library redirects the connection to the SOCKS server
+specified in the configuration file. It then negotiates that connection
+with the SOCKS server and passes the connection back to the calling
+program. 
+
+.BR tsocks 
+is designed for use in machines which are firewalled from then
+internet. It avoids the need to recompile applications like lynx or
+telnet so they can use SOCKS to reach the internet. It behaves much like
+the SOCKSified TCP/IP stacks seen on other platforms.
+
+.SS ARGUMENTS
+Arguments to
+.BR tsocks
+are provided in the configuration file (the location of which is defined
+at compile time by the CONFFILE variable but defaults to
+/etc/tsocks.conf).
+The file consists of <variable> = <value> pairs. The following variables
+may be specified:
+
+.TP
+.I server
+The IP address of the SOCKS server (e.g "server = 10.1.4.253"). Only one
+of these lines may be specified.
+
+.TP
+.I server_port
+The port on which the SOCKS server receives requests. Only one of these
+lines may be specified and it is not required if the server is on the
+standard port (1080).
+
+.TP
+.I server_type
+SOCKS version used by the server. Versions 4 and 5 are supported (but both
+for only the connect operation).  The default is 4.
+
+You can use the inspectsocks utility to determine which sort of server you
+have. Inspectsocks takes as its arguments the ip address of the SOCKS
+server and optionally the port number for socks. It then inspects that 
+server to attempt to determine the version that server supports. Please 
+e-mail me (delius@progsoc.org) if you get strange results from this.
+
+.TP
+.I default_user
+This specifies the default username to be used for username and password
+authentication in SOCKS version 5. In order to determine the username to
+use (if the socks server requires username and password authentication)
+tsocks first looks for the environment variable TSOCKS_USERNAME, then
+looks for this configuration option, then tries to get the local username.
+This option is not valid for SOCKS version 4 servers.
+
+.TP
+.I default_pass
+This specified the default password to be used for username and password
+authentication in SOCKS version 5. In order to determine the password to
+use (if the socks server requires username and password authentication)
+tsocks first looks for the environment variable TSOCKS_PASSWORD, then
+looks for this configuration option. This option is not valid for SOCKS
+version 4 servers.
+
+.TP
+.I local
+An IP/Subnet pair which may be accessed directly and therefore do not need
+SOCKS proxying (e.g "local = 10.0.0.0/255.0.0.0"). Obviously the SOCKS
+server MUST be local.
+
+.SS DNS ISSUES
+.BR tsocks
+will normally not be able to send DNS queries through a SOCKS server since
+SOCKS V4 works on TCP and DNS normally uses UDP. Version 1.5 and up do
+however provide a method to force DNS lookups to use TCP, which then makes
+them proxyable. This option can only enabled at compile time, please
+consult the INSTALL file for more information.
+
+.SS ERRORS
+.BR tsocks
+will generate error messages and print them to stderr when there are
+problems with the configuration file or the SOCKS negotiation with the
+server if the DEBUG variable is set at compile time. The DEBUG variable is
+set by default but may cause problems with some programs that redirect
+stderr.
+
+.SS CAVEATS
+.BR tsocks
+will not in the above configuration be able to provide SOCKS proxying to
+setuid applications or applications that are not run from a shell. You can
+force all applications to LD_PRELOAD the library by placing the path to
+libtsocks in /etc/ld.so.preload. Please make sure you correctly enter the
+full path to the library in this file if you do this. If you get it wrong,
+you will be UNABLE TO DO ANYTHING with the machine and will have to boot
+it with a rescue disk and remove the file (or try the saveme program, see
+the INSTALL file for more info).  THIS IS A ***WARNING***, please be
+careful. Also be sure the library is in the root filesystem as all hell
+will break loose if the directory it is in is not available at boot time.
+
+.SH BUGS
+
+.BR tsocks
+can only perform outgoing TCP connections
+
+.BR tsocks
+is NOT fully RFC compliant in its implementation of version 5 of SOCKS, it
+only supports the 'username and password' or 'no authentication'
+authentication methods. The RFC specifies GSSAPI must be supported by any
+compliant implementation. I haven't done this, anyone want to help?
+
+.BR tsocks
+can force the libc resolver to use TCP for name queries, if it does this
+it does it regardless of whether or not the DNS to be queried is local or
+not. This introduces overhead and should only be used when needed.
+
+.BR tsocks 
+uses the ELF shared library mechanism to intercept
+system calls.  As a result, it cannot trace the actions of statically
+linked executables, non-ELF executables, or executables that make system
+calls directly with the system call trap or through the syscall() routine.
+
+.SH AUTHOR
+Shaun Clowes (delius@progsoc.uts.edu.au)
+
+.SH COPYRIGHT
+Copyright 2000 Shaun Clowes
+
+tsocks and its documentation may be freely copied under the terms and
+conditions of version 2 of the GNU General Public License, as published
+by the Free Software Foundation (Cambridge, Massachusetts, United
+States of America).
+
+This documentation is based on the documentation for logwrites, another
+shared library interceptor. One line of code from it was used in
+tsocks and a lot of the documentation :) logwrites is by
+adam@yggdrasil.com (Adam J. Richter) and can be had from ftp.yggdrasil.com
+pub/dist/pkg

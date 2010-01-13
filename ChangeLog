@@ -1,0 +1,42 @@
+version 1.60 - 2000.7.11 delius@progsoc.uts.edu.au
+	Fixed segmentation fault when reading configuration file
+	Fixed Makefile.solaris issues
+	Corrected Solaris support, should now work I hope :)
+	Fixed Makefile problem
+	Fixed localhost issues (127.0.0.0/255.0.0.0 is now automatically
+added as a local network)
+	Removed limitation to number of local nets and reduced memory
+footprint
+	Added inspectsocks utility
+	Added initial support for SOCKS version 5
+	Fixed bad connect return codes
+	Update man page, announce and README
+
+version 1.50 - 2000.5.23 delius@progsoc.uts.edu.au
+	Fixed bug with setsockopt code thanks to Ronnie Misra
+	Added support to force TCP dns lookups (i.e allow socksified
+DNS) thanks to Joris van Rantwijk
+	Properly generate errors for unresolved symbols
+
+version 1.40 - 2000.5.12 delius@progsoc.uts.edu.au
+	Fix Solaris support, should now compile on 5.6,5.7 and 5.8
+	Fix Makefile problem
+
+version 1.30 - 2000.5.10 delius@progsoc.uts.edu.au
+	Added server_port configuration option
+	Experimental Solaris support
+
+version 1.20 - 2000.5.5 delius@progsoc.uts.edu.au
+	Correctly parse configuration file (finally :))
+	Configuration file renamed to tsocks.conf (conflict with Netscape)
+	Detect non local SOCKS server and show error
+
+version 1.10 - 2000.5.3 delius@progsoc.uts.edu.au
+	Correctly parse the SOCKS server's return code for our request
+	Provide an INSTALL guide
+	Improved error handling
+	Provide a program to try to save those people who break their
+ld.so.preload file
+
+version 1.00 - 2000.5.2 delius@progsoc.uts.edu.au
+	First Release

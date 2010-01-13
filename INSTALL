@@ -1,0 +1,91 @@
+Quick Installation Instructions
+-------------------------------
+
+1. Unpack the archive (though if you're reading this you've already
+achieved that)
+
+	tar -zxvf tsocks-<version>.tar.gx
+
+2. If you're installing on Solaris, read INSTALL.solaris
+
+3. Change any compile time options at the top of the tsocks.c file. There
+are three options you may be interested in
+
+	CONFFILE - The path to the configuration file. This file specifies
+several options that affect the behaviour of the library. See the man page
+for further details
+
+	DEBUG - Defaults to 1, means that the library will display on the
+console any errors it encounters. This is normally what you want, but if
+you're after complete transparency, make this 0.
+
+	SOCKSDNS - This option is a way of forcing the libc resolver to
+use TCP instead of UDP. Essentially, it allows DNS lookups to go over
+SOCKS by making them TCP then using the SOCKS proxy. Its debatable whether
+this is nice or not, but it works. This code was contributed by Joris van
+Rantwijk. In order to enable it, above the #define CONFFILE line place a
+line like '#define SOCKSDNS'.
+
+4. Compile the code by typing:
+
+	make
+
+5. If you experience any errors at this step and don't know how to fix
+them, please feel free to mail me at delius@progsoc.org
+
+6. Install the compiled library. You can skip this step if you only plan
+to use the library for personal use. If you want all users on the machine
+to be able to use it however, su to root then type
+
+	make install
+
+This will by default install the library to /usr/lib (though you can edit
+this path in the "Makefile")
+
+7. On linux systems at least, run 
+
+	/sbin/ldconfig 
+
+To update the links in the lib directory if you created the libraries for
+use by all users
+
+8. At this point you'll need to create the tsocks configuration file.
+There is a sample provided (in the build directory called
+tsocks.conf.example). You will also find more information on this file in
+the man page ('man tsocks')
+
+9. You can now choose to make the library affect all users or just those
+who choose to use it. If you want users to use it themselves, they need to
+do the following in their shell before running applications that need to
+be transparently proxied:
+
+	(in Bash) export LD_PRELOAD=<path to library>
+
+	(in CSH) setenv LD_PRELOAD <path to library>
+
+	<path to library> = e.g /usr/lib/libtsocks.so.1.0
+
+If you want all users to pick up the library, place the full path to the
+full library in the file /etc/ld.so.preload (e.g
+"/usr/lib/libtsocks.so). Be EXTREMELY careful if you do this, if you
+mistype it or in some way get it wrong this will make your machine
+UNUSABLE. Also, if you do this, make sure the directory you put the
+library in is in the root of the filesystem, if the library is
+not available at boot time, again, your machine will be UNUSABLE. This
+generally means you'll have to change the path to /lib (in the Makefile
+remove the "/usr/" bit).
+
+10. Go ahead and use it! At this point everything should work. Again, if
+you experience any problems, drop me a line at delius@progsoc.org. If you
+do happen to break your machine with /etc/ld.so.preload, the build process
+creates a statically linked executable called saveme in the build
+directory. This executable simply unlinks /etc/ld.so.preload, this may or
+may not save you so give it a try. If it fails, you'll need to switch off
+the machine and get a rescue disk (e.g tomsrtbt) mount the disk and remove
+the file manually.
+
+Thats it, 
+
+Thanks,
+Shaun Clowes
+(delius@progsoc.org)

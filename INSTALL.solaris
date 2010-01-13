@@ -1,0 +1,22 @@
+This version of tsocks includes preliminary support for Solaris. While I
+have successfully built the software on Solaris 2.6, I have no SOCKS
+server to test it against on that platform. Therefore please treat the
+support as entirely experimental and give me feedback on its
+success/failure in your environment. 
+
+In order to build tsocks for Solaris gcc is required. 
+
+Intitially you have to run the makeSolaris script:
+
+	./makeSolaris
+
+Then follow the steps as shown in the INSTALL file, but where make is
+used, use:
+
+	make -f Makefile.solaris
+
+instead.
+
+Thanks,
+Shaun Clowes
+(delius@progsoc.org)

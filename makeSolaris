@@ -1,0 +1,8 @@
+
+#!/bin/sh
+
+VER=`uname -r | sed -e 's/.*\.//g'` 
+
+sed -e "s/\#define OSNAME.*/#define OSNAME solaris/g" tsocks.c > tsocks.new.c
+sed -e "s/\#define OSVER.*/#define OSVER $VER/g" tsocks.new.c > tsocks.c
+
