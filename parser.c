@@ -100,7 +100,7 @@ static int check_server(struct serverent *server) {
 
 	/* Default to the default SOCKS port */
 	if (server->port == 0) {
-		server->port = htons(1080);
+		server->port = 1080;
 	}
 
 	/* Default to SOCKS V4 */
@@ -343,7 +343,7 @@ static int handle_port(int lineno, char *value) {
 	} else {
 		errno = 0;
 		currentcontext->port = (unsigned short int)
-				  htons(strtol(value, (char **)NULL, 10));
+				  (strtol(value, (char **)NULL, 10));
 		if ((errno != 0) || (currentcontext->port == 0)) {
 			show_error("Invalid server port number "
 				   "specified in configuration file "

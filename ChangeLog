@@ -1,3 +1,6 @@
+version 1.80Beta2 - 2002.1.19 delius@progsoc.uts.edu.au
+   Fix showstopper bug with SOCKS server port numbers
+
 version 1.80Beta - 2002.1.12 delius@progsoc.uts.edu.au
    Allow choice of SOCKS server by port number (based on 
       suggestions from Joakim Recht)

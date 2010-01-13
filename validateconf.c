@@ -181,7 +181,7 @@ void show_server(struct serverent *server, int def) {
 				"specified as local\n");
 
 	/* Show port */
-	printf("Port:         %d\n", ntohs(server->port));
+	printf("Port:         %d\n", server->port);
 
 	/* Show SOCKS type */
 	printf("SOCKS type:   %d\n", server->type);
