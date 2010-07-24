@@ -1,28 +1,26 @@
 /*
+ * INSPECTSOCKS - Part of the tsocks package
+ * This utility can be used to determine the protocol
+ * level of a SOCKS server.
+ *
+ * Copyright (C) 2000 Shaun Clowes
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
-   INSPECTSOCKS - Part of the tsocks package
-   This utility can be used to determine the protocol 
-   level of a SOCKS server.
-
-   Copyright (C) 2000 Shaun Clowes 
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-*/
-
-/* Global configuration variables */ 
+/* Global configuration variables */
 char *progname = "inspectsocks";	   /* Name for error msgs      */
 int defaultport	= 1080;			   /* Default SOCKS port       */
 
@@ -40,7 +38,7 @@ int defaultport	= 1080;			   /* Default SOCKS port       */
 #include <errno.h>
 #include <common.h>
 
-int send_request(struct sockaddr_in *server, void *req, 
+int send_request(struct sockaddr_in *server, void *req,
 	int reqlen, void *rep, int replen);
 
 int main(int argc, char *argv[]) {
@@ -86,14 +84,14 @@ int main(int argc, char *argv[]) {
     bzero(req, sizeof(req));
     req[0] = '\x05';
     req[1] = '\x07';
-    read_bytes = send_request(&server, req, 
+    read_bytes = send_request(&server, req,
 	    sizeof(req), resp, sizeof(resp));
     if (read_bytes > 0) {
 	if ((int) resp[0] == 0) {
 	    ver = 4;
 	} else if ((int) resp[0] == 5) {
 	    ver = 5;
-	} 
+	}
 	if (ver != 0) {
 	    printf("Reply indicates server is a version "
 		    "%d socks server\n", ver);
@@ -103,18 +101,18 @@ int main(int argc, char *argv[]) {
 		    ver);
 	}
 	exit(0);
-    }	
+    }
 
     /* Hmmm.... disconnected so try a V4 request */
     printf("Server disconnected V5 request, trying V4\n");
     req[0] = '\x04';
     req[1] = '\x01';
-    read_bytes = send_request(&server, req, 
-	    sizeof(req), resp, sizeof(resp));	
+    read_bytes = send_request(&server, req,
+	    sizeof(req), resp, sizeof(resp));
     if (read_bytes > 0) {
 	if ((int) resp[0] == 0) {
 	    ver = 4;
-	} 
+	}
 	if (ver == 4) {
 	    printf("Reply indicates server is a version "
 		    "4 socks server\n");
@@ -129,10 +127,10 @@ int main(int argc, char *argv[]) {
 		"socks server\n");
     }
 
-    return(0);  
+    return(0);
 }
 
-int send_request(struct sockaddr_in *server, void *req, 
+int send_request(struct sockaddr_in *server, void *req,
 	int reqlen, void *rep, int replen) {
     int sock;
     int rc;

@@ -1,8 +1,6 @@
 /*
-
-   commmon.c    - Common routines for the tsocks package 
-
-*/
+ * commmon.c    - Common routines for the tsocks package
+ */
 
 #include <config.h>
 #include <stdio.h>
@@ -42,7 +40,7 @@ unsigned int resolve_ip(char *host, int showmsg, int allownames) {
 	    } else {
 		ip = ((struct in_addr *) * new->h_addr_list);
 		hostaddr = ip -> s_addr;
-		if (showmsg) 
+		if (showmsg)
 		    printf("Connecting to %s...\n", inet_ntoa(*ip));
 	    }
 #endif
@@ -93,7 +91,7 @@ void show_msg(int level, char *fmt, ...) {
 	    logfile = fopen(logfilename, "a");
 	    if (logfile == NULL) {
 		logfile = stderr;
-		show_msg(MSGERR, "Could not open log file, %s, %s\n", 
+		show_msg(MSGERR, "Could not open log file, %s, %s\n",
 			logfilename, strerror(errno));
 	    }
 	} else
@@ -102,7 +100,7 @@ void show_msg(int level, char *fmt, ...) {
 
     if (logstamp) {
 	timestamp = time(NULL);
-	strftime(timestring, sizeof(timestring),  "%H:%M:%S", 
+	strftime(timestring, sizeof(timestring),  "%H:%M:%S",
 		localtime(&timestamp));
 	fprintf(logfile, "%s ", timestring);
     }

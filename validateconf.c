@@ -1,28 +1,27 @@
 /*
+ *  VALIDATECONF - Part of the tsocks package
+ *
+ *  This utility can be used to validate the tsocks.conf
+ *  configuration file
+ *
+ *  Copyright (C) 2000 Shaun Clowes
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
-   VALIDATECONF - Part of the tsocks package
-   This utility can be used to validate the tsocks.conf
-   configuration file
-
-   Copyright (C) 2000 Shaun Clowes 
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-*/
-
-/* Global configuration variables */ 
+/* Global configuration variables */
 char *progname = "validateconf";	      /* Name for error msgs      */
 
 /* Header Files */
@@ -44,7 +43,7 @@ void show_conf(struct parsedfile *config);
 void test_host(struct parsedfile *config, char *);
 
 int main(int argc, char *argv[]) {
-    char *usage = "Usage: [-f conf file] [-t hostname/ip[:port]]"; 
+    char *usage = "Usage: [-f conf file] [-t hostname/ip[:port]]";
     char *filename = NULL;
     char *testhost = NULL;
     struct parsedfile config;
@@ -68,13 +67,13 @@ int main(int argc, char *argv[]) {
 	}
     }
 
-    if (!filename) 
+    if (!filename)
 	filename = strdup(CONF_FILE);
 
     printf("Reading configuration file %s...\n", filename);
     if (read_config(filename, &config) == 0)
 	printf("... Read complete\n\n");
-    else 
+    else
 	exit(1);
 
     /* If they specified a test host, test it, otherwise */
@@ -84,10 +83,10 @@ int main(int argc, char *argv[]) {
     else
 	test_host(&config, testhost);
 
-    return(0);  
+    return(0);
 }
 
-void test_host(struct parsedfile *config, char *host) { 
+void test_host(struct parsedfile *config, char *host) {
     struct in_addr hostaddr;
     struct serverent *path;
     char *hostname, *port;
@@ -98,7 +97,7 @@ void test_host(struct parsedfile *config, char *host) {
     hostname = strsplit(&separator, &host, ": \t\n");
     if (separator == ':') {
 	port = strsplit(NULL, &host, " \t\n");
-	if (port) 
+	if (port)
 	    portno = strtol(port, NULL, 0);
     }
 
@@ -135,7 +134,7 @@ void show_conf(struct parsedfile *config) {
     while (net != NULL) {
 	printf("Network: %15s ",
 		inet_ntoa(net->localip));
-	printf("NetMask: %15s\n", 
+	printf("NetMask: %15s\n",
 		inet_ntoa(net->localnet));
 	net = net->next;
     }
@@ -160,8 +159,8 @@ void show_conf(struct parsedfile *config) {
 	    show_server(config, server, 0);
 	    printf("\n");
 	    server = server->next;
-	}	
-    } 
+	}
+    }
 
     return;
 }
@@ -171,17 +170,17 @@ void show_server(struct parsedfile *config, struct serverent *server, int def) {
     struct netent *net;
 
     /* Show address */
-    if (server->address != NULL) 
-	printf("Server:       %s (%s)\n", server->address, 
-		((res.s_addr = resolve_ip(server->address, 0, 
-					  HOSTNAMES)) == -1 
+    if (server->address != NULL)
+	printf("Server:       %s (%s)\n", server->address,
+		((res.s_addr = resolve_ip(server->address, 0,
+					  HOSTNAMES)) == -1
 		 ? "Invalid!" : inet_ntoa(res)));
     else
 	printf("Server:       ERROR! None specified\n");
 
     /* Check the server is on a local net */
-    if ((server->address != NULL) && (res.s_addr != -1) && 
-	    (is_local(config, &res))) 
+    if ((server->address != NULL) && (res.s_addr != -1) &&
+	    (is_local(config, &res)))
 	fprintf(stderr, "Error: Server is not on a network "
 		"specified as local\n");
 
@@ -194,20 +193,20 @@ void show_server(struct parsedfile *config, struct serverent *server, int def) {
     /* Show default username and password info */
     if (server->type == 5) {
 	/* Show the default user info */
-	printf("Default user: %s\n", 
-		(server->defuser == NULL) ? 
+	printf("Default user: %s\n",
+		(server->defuser == NULL) ?
 		"Not Specified" : server->defuser);
-	printf("Default pass: %s\n", 
-		(server->defpass == NULL) ? 
+	printf("Default pass: %s\n",
+		(server->defpass == NULL) ?
 		"Not Specified" : "******** (Hidden)");
-	if ((server->defuser == NULL) && 
-		(server->defpass != NULL)) 
+	if ((server->defuser == NULL) &&
+		(server->defpass != NULL))
 	    fprintf(stderr, "Error: Default user must be specified "
 		    "if default pass is specified\n");
     } else {
-	if (server->defuser) printf("Default user: %s\n", 
+	if (server->defuser) printf("Default user: %s\n",
 		server->defuser);
-	if (server->defpass) printf("Default pass: %s\n", 
+	if (server->defpass) printf("Default pass: %s\n",
 		server->defpass);
 	if ((server->defuser != NULL) || (server->defpass != NULL))
 	    fprintf(stderr, "Error: Default user and password "
@@ -217,7 +216,7 @@ void show_server(struct parsedfile *config, struct serverent *server, int def) {
 
     /* If this is the default servers and it has reachnets, thats stupid */
     if (def) {
-	if (server->reachnets != NULL) { 
+	if (server->reachnets != NULL) {
 	    fprintf(stderr, "Error: The default server has "
 		    "specified networks it can reach (reach statements), "
 		    "these statements are ignored since the "
@@ -234,7 +233,7 @@ void show_server(struct parsedfile *config, struct serverent *server, int def) {
 	while (net != NULL) {
 	    printf("Network: %15s ",
 		    inet_ntoa(net->localip));
-	    printf("NetMask: %15s ", 
+	    printf("NetMask: %15s ",
 		    inet_ntoa(net->localnet));
 	    if (net->startport)
 		printf("Ports: %5lu - %5lu",
