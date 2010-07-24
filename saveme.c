@@ -30,3 +30,7 @@ int main() {
 
     return(0);
 }
+
+/*
+ * vim:sw=4:sts=4:tw=80
+ */

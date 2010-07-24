@@ -1187,6 +1187,7 @@ if ((sockflags & O_NONBLOCK) != 0) {
     fcntl(sockid, F_SETFL, sockflags & (~(O_NONBLOCK)));
 }
 #endif
+
 #if 0
 /* If the socket was in non blocking mode, restore that */
 if ((sockflags & O_NONBLOCK) != 0) {
@@ -1194,3 +1195,6 @@ if ((sockflags & O_NONBLOCK) != 0) {
 }
 #endif
 
+/*
+ * vim:sw=4:sts=4:tw=80
+ */

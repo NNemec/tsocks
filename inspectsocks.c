@@ -168,3 +168,7 @@ int send_request(struct sockaddr_in *server, void *req,
     return(rc);
 
 }
+
+/*
+ * vim:sts=4:sw=4:tw=80
+ */

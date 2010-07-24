@@ -25,7 +25,7 @@ int logstamp = 0;         /* Timestamp (and pid stamp) messages */
 
 unsigned int resolve_ip(char *host, int showmsg, int allownames) {
     struct hostent *new;
-    unsigned int	hostaddr;
+    unsigned int hostaddr;
     struct in_addr *ip;
 
     if ((hostaddr = inet_addr(host)) == (unsigned int) -1) {
@@ -48,7 +48,7 @@ unsigned int resolve_ip(char *host, int showmsg, int allownames) {
 	    return(-1);
     }
 
-    return (hostaddr);
+    return hostaddr;
 }
 
 /* Set logging options, the options are as follows:             */
@@ -127,3 +127,6 @@ void show_msg(int level, char *fmt, ...) {
     va_end(ap);
 }
 
+/*
+ * vim:sts=4:sw=4:tw=80
+ */

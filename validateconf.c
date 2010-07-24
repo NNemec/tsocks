@@ -243,3 +243,7 @@ void show_server(struct parsedfile *config, struct serverent *server, int def) {
 	}
     }
 }
+
+/*
+ * vim:sw=4:sts=4:tw=80
+ */

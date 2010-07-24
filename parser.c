@@ -531,133 +531,136 @@ int make_netent(char *value, struct netent **ent) {
 #ifdef HAVE_INET_ADDR
     if (((*ent)->localip.s_addr = inet_addr(ip)) == -1) {
 #elif defined(HAVE_INET_ATON)
-	if (!(inet_aton(ip, &((*ent)->localip)))) {
+    if (!(inet_aton(ip, &((*ent)->localip)))) {
 #endif
-	    /* Badly constructed IP */
-	    free(*ent);
-	    return(2);
-	}
+	/* Badly constructed IP */
+	free(*ent);
+	return(2);
+    }
 #ifdef HAVE_INET_ADDR
-	else if (((*ent)->localnet.s_addr = inet_addr(subnet)) == -1) {
+    else if (((*ent)->localnet.s_addr = inet_addr(subnet)) == -1) {
 #elif defined(HAVE_INET_ATON)
-	    else if (!(inet_aton(subnet, &((*ent)->localnet)))) {
+    else if (!(inet_aton(subnet, &((*ent)->localnet)))) {
 #endif
-		/* Badly constructed subnet */
-		free(*ent);
-		return(3);
-	    } else if (((*ent)->localip.s_addr &
-			(*ent)->localnet.s_addr) !=
-		    (*ent)->localip.s_addr) {
-		/* Subnet and Ip != Ip */
-		free(*ent);
-		return(4);
-	    } else if (startport &&
-		    (!((*ent)->startport = strtol(startport, &badchar, 10)) ||
-		     (*badchar != 0) || ((*ent)->startport > 65535))) {
-		/* Bad start port */
-		free(*ent);
-		return(5);
-	    } else if (endport &&
-		    (!((*ent)->endport = strtol(endport, &badchar, 10)) ||
-		     (*badchar != 0) || ((*ent)->endport > 65535))) {
-		/* Bad end port */
-		free(*ent);
-		return(6);
-	    } else if (((*ent)->startport > (*ent)->endport) && !(startport && !endport)) {
-		/* End port is less than start port */
-		free(*ent);
-		return(7);
-	    }
+	/* Badly constructed subnet */
+	free(*ent);
+	return(3);
+    } else if (((*ent)->localip.s_addr &
+		(*ent)->localnet.s_addr) !=
+	    (*ent)->localip.s_addr) {
+	/* Subnet and Ip != Ip */
+	free(*ent);
+	return(4);
+    } else if (startport &&
+	    (!((*ent)->startport = strtol(startport, &badchar, 10)) ||
+	     (*badchar != 0) || ((*ent)->startport > 65535))) {
+	/* Bad start port */
+	free(*ent);
+	return(5);
+    } else if (endport &&
+	    (!((*ent)->endport = strtol(endport, &badchar, 10)) ||
+	     (*badchar != 0) || ((*ent)->endport > 65535))) {
+	/* Bad end port */
+	free(*ent);
+	return(6);
+    } else if (((*ent)->startport > (*ent)->endport) && !(startport && !endport)) {
+	/* End port is less than start port */
+	free(*ent);
+	return(7);
+    }
 
-	    if (startport && !endport)
-		(*ent)->endport = (*ent)->startport;
+    if (startport && !endport)
+	(*ent)->endport = (*ent)->startport;
 
+    return(0);
+}
+
+int is_local(struct parsedfile *config, struct in_addr *testip) {
+    struct netent *ent;
+
+    for (ent = (config->localnets); ent != NULL; ent = ent -> next) {
+	if ((testip->s_addr & ent->localnet.s_addr) ==
+		(ent->localip.s_addr & ent->localnet.s_addr))  {
 	    return(0);
 	}
+    }
 
-	int is_local(struct parsedfile *config, struct in_addr *testip) {
-	    struct netent *ent;
+    return(1);
+}
 
-	    for (ent = (config->localnets); ent != NULL; ent = ent -> next) {
-		if ((testip->s_addr & ent->localnet.s_addr) ==
-			(ent->localip.s_addr & ent->localnet.s_addr))  {
-		    return(0);
-		}
+/* Find the appropriate server to reach an ip */
+int pick_server(struct parsedfile *config, struct serverent **ent,
+	struct in_addr *ip, unsigned int port) {
+    struct netent *net;
+    char ipbuf[64];
+
+    show_msg(MSGDEBUG, "Picking appropriate server for %s\n", inet_ntoa(*ip));
+    *ent = (config->paths);
+    while (*ent != NULL) {
+	/* Go through all the servers looking for one */
+	/* with a path to this network                */
+	show_msg(MSGDEBUG, "Checking SOCKS server %s\n",
+		((*ent)->address ? (*ent)->address : "(No Address)"));
+	net = (*ent)->reachnets;
+	while (net != NULL) {
+	    strcpy(ipbuf, inet_ntoa(net->localip));
+	    show_msg(MSGDEBUG, "Server can reach %s/%s\n",
+		    ipbuf, inet_ntoa(net->localnet));
+	    if (((ip->s_addr & net->localnet.s_addr) ==
+			(net->localip.s_addr & net->localnet.s_addr)) &&
+		    (!net->startport ||
+		     ((net->startport <= port) && (net->endport >= port))))
+	    {
+		show_msg(MSGDEBUG, "This server can reach target\n");
+		/* Found the net, return */
+		return(0);
 	    }
-
-	    return(1);
+	    net = net->next;
 	}
+	(*ent) = (*ent)->next;
+    }
 
-	/* Find the appropriate server to reach an ip */
-	int pick_server(struct parsedfile *config, struct serverent **ent,
-		struct in_addr *ip, unsigned int port) {
-	    struct netent *net;
-	    char ipbuf[64];
+    *ent = &(config->defaultserver);
 
-	    show_msg(MSGDEBUG, "Picking appropriate server for %s\n", inet_ntoa(*ip));
-	    *ent = (config->paths);
-	    while (*ent != NULL) {
-		/* Go through all the servers looking for one */
-		/* with a path to this network                */
-		show_msg(MSGDEBUG, "Checking SOCKS server %s\n",
-			((*ent)->address ? (*ent)->address : "(No Address)"));
-		net = (*ent)->reachnets;
-		while (net != NULL) {
-		    strcpy(ipbuf, inet_ntoa(net->localip));
-		    show_msg(MSGDEBUG, "Server can reach %s/%s\n",
-			    ipbuf, inet_ntoa(net->localnet));
-		    if (((ip->s_addr & net->localnet.s_addr) ==
-				(net->localip.s_addr & net->localnet.s_addr)) &&
-			    (!net->startport ||
-			     ((net->startport <= port) && (net->endport >= port))))
-		    {
-			show_msg(MSGDEBUG, "This server can reach target\n");
-			/* Found the net, return */
-			return(0);
-		    }
-		    net = net->next;
-		}
-		(*ent) = (*ent)->next;
-	    }
+    return(0);
+}
 
-	    *ent = &(config->defaultserver);
+/* This function is very much like strsep, it looks in a string for */
+/* a character from a list of characters, when it finds one it      */
+/* replaces it with a \0 and returns the start of the string        */
+/* (basically spitting out tokens with arbitrary separators). If no */
+/* match is found the remainder of the string is returned and       */
+/* the start pointer is set to be NULL. The difference between      */
+/* standard strsep and this function is that this one will          */
+/* set *separator to the character separator found if it isn't null */
+char *strsplit(char *separator, char **text, const char *search) {
+    int len;
+    char *ret;
 
-	    return(0);
+    ret = *text;
+
+    if (*text == NULL) {
+	if (separator)
+	    *separator = '\0';
+	return(NULL);
+    } else {
+	len = strcspn(*text, search);
+	if (len == strlen(*text)) {
+	    if (separator)
+		*separator = '\0';
+	    *text = NULL;
+	} else {
+	    *text = *text + len;
+	    if (separator)
+		*separator = **text;
+	    **text = '\0';
+	    *text = *text + 1;
 	}
+    }
 
-	/* This function is very much like strsep, it looks in a string for */
-	/* a character from a list of characters, when it finds one it      */
-	/* replaces it with a \0 and returns the start of the string        */
-	/* (basically spitting out tokens with arbitrary separators). If no */
-	/* match is found the remainder of the string is returned and       */
-	/* the start pointer is set to be NULL. The difference between      */
-	/* standard strsep and this function is that this one will          */
-	/* set *separator to the character separator found if it isn't null */
-	char *strsplit(char *separator, char **text, const char *search) {
-	    int len;
-	    char *ret;
+    return(ret);
+}
 
-	    ret = *text;
-
-	    if (*text == NULL) {
-		if (separator)
-		    *separator = '\0';
-		return(NULL);
-	    } else {
-		len = strcspn(*text, search);
-		if (len == strlen(*text)) {
-		    if (separator)
-			*separator = '\0';
-		    *text = NULL;
-		} else {
-		    *text = *text + len;
-		    if (separator)
-			*separator = **text;
-		    **text = '\0';
-		    *text = *text + 1;
-		}
-	    }
-
-	    return(ret);
-	}
-
+/*
+ * vim:sw=4:sts=4:tw=80
+ */
