@@ -1806,12 +1806,7 @@ ac_config_headers="$ac_config_headers config.h"
 
 
 
-cat >>confdefs.h <<\_ACEOF
-#define PREFIX "/usr"
-_ACEOF
 
-
-test "$libdir" = "\${exec_prefix}/lib" && libdir="/lib"
 
 # Check whether --enable-socksdns was given.
 if test "${enable_socksdns+set}" = set; then
