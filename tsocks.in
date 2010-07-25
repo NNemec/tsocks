@@ -5,7 +5,27 @@
 tsocks="@prefix@/lib/libtsocks.so"
 
 usage () {
-  echo "Usage: $0 [options] [--] [program] [arguments...]"
+  cat << EOF
+Usage: $0 [options] [--] program [arguments...]
+
+-h, --help
+	Shows this message.
+
+-c, --conf
+	Use specified configuration file instead of /etc/tsocks.conf.
+
+-d n, --debug n
+	Set debug level.
+
+-f FILE, --debug-file FILE
+	Output debug messages to specified file.
+
+-u USERNAME, --username USERNAME
+	Set SOCKS username.
+
+-p PASSWORD, --password PASSWORD
+	Set SOCKS password.
+EOF
 }
 
 enable () {
