@@ -332,4 +332,4 @@ SPECIALLIBS=${LIBS}
 AC_SUBST(SPECIALLIBS)
 LIBS=${SIMPLELIBS}
 
-AC_OUTPUT(Makefile)
+AC_OUTPUT([Makefile tsocks], [chmod +x tsocks])
