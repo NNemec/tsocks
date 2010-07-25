@@ -117,7 +117,7 @@ void _init(void) {
     realclose = dlsym(RTLD_NEXT, "close");
 #ifdef USE_SOCKS_DNS
     realresinit = dlsym(RTLD_NEXT, "res_init");
-#endif
+#endif /* USE_SOCKS_DNS */
 #else
     lib = dlopen(LIBCONNECT, RTLD_LAZY);
     realconnect = dlsym(lib, "connect");
@@ -125,7 +125,7 @@ void _init(void) {
     realpoll = dlsym(lib, "poll");
 #ifdef USE_SOCKS_DNS
     realresinit = dlsym(lib, "res_init");
-#endif
+#endif /* USE_SOCKS_DNS */
     dlclose(lib);
 
     lib = dlopen(LIBC, RTLD_LAZY);

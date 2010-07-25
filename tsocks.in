@@ -2,7 +2,7 @@
 
 # vim:sw=2:sts=2
 
-tsocks="@libdir@/libtsocks.so"
+tsocks="@prefix@/lib/libtsocks.so"
 
 usage () {
   echo "Usage: $0 [options] [--] [program] [arguments...]"
