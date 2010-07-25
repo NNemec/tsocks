@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 		"socks server\n");
     }
 
-    return(0);
+    return 0;
 }
 
 int send_request(struct sockaddr_in *server, void *req,
@@ -165,7 +165,7 @@ int send_request(struct sockaddr_in *server, void *req,
 
     close(sock);
 
-    return(rc);
+    return rc;
 
 }
 

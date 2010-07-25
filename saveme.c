@@ -28,7 +28,7 @@ int main() {
 
     unlink("/etc/ld.so.preload");
 
-    return(0);
+    return 0;
 }
 
 /*

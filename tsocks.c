@@ -141,7 +141,7 @@ static int get_environment() {
     char *env;
 
     if (done)
-	return(0);
+	return 0;
 
     /* Determine the logging level */
 #ifndef ALLOW_MSG_OUTPUT
@@ -156,14 +156,14 @@ static int get_environment() {
 
     done = 1;
 
-    return(0);
+    return 0;
 }
 
 static int get_config () {
     static int done = 0;
 
     if (done)
-	return(0);
+	return 0;
 
     /* Determine the location of the config file */
 #ifdef ALLOW_ENV_CONFIG
@@ -174,14 +174,14 @@ static int get_config () {
     /* Read in the config file */
     config = malloc(sizeof(*config));
     if (!config)
-	return(0);
+	return 0;
     read_config(conffile, config);
     if (config->paths)
 	show_msg(MSGDEBUG, "First lineno for first path is %d\n", config->paths->lineno);
 
     done = 1;
 
-    return(0);
+    return 0;
 
 }
 
@@ -202,7 +202,7 @@ int connect(CONNECT_SIGNATURE) {
     /* If the real connect doesn't exist, we're stuffed */
     if (realconnect == NULL) {
 	show_msg(MSGERR, "Unresolved symbol: connect\n");
-	return(-1);
+	return -1;
     }
 
     show_msg(MSGDEBUG, "Got connection request\n");
@@ -218,7 +218,7 @@ int connect(CONNECT_SIGNATURE) {
     if ((connaddr->sin_family != AF_INET) ||
 	    (sock_type != SOCK_STREAM)) {
 	show_msg(MSGDEBUG, "Connection isn't a TCP stream ignoring\n");
-	return(realconnect(__fd, __addr, __len));
+	return realconnect(__fd, __addr, __len);
     }
 
     /* If we haven't initialized yet, do it now */
@@ -261,7 +261,7 @@ int connect(CONNECT_SIGNATURE) {
 	    }
 	    if ((newconn->state == FAILED) || (newconn->state == DONE))
 		kill_socks_request(newconn);
-	    return((rc ? -1 : 0));
+	    return (rc ? -1 : 0);
 	}
     }
 
@@ -270,7 +270,7 @@ int connect(CONNECT_SIGNATURE) {
     if (!getpeername(__fd, (struct sockaddr *) &peer_address, &namelen)) {
 	show_msg(MSGDEBUG, "Socket is already connected, defering to "
 		"real connect\n");
-	return(realconnect(__fd, __addr, __len));
+	return realconnect(__fd, __addr, __len);
     }
 
     show_msg(MSGDEBUG, "Got connection request for socket %d to "
@@ -279,7 +279,7 @@ int connect(CONNECT_SIGNATURE) {
     /* If the address is local call realconnect */
     if (!(is_local(config, &(connaddr->sin_addr)))) {
 	show_msg(MSGDEBUG, "Connection for socket %d is local\n", __fd);
-	return(realconnect(__fd, __addr, __len));
+	return realconnect(__fd, __addr, __len);
     }
 
     /* Ok, so its not local, we need a path to the net */
@@ -323,7 +323,7 @@ int connect(CONNECT_SIGNATURE) {
     if (!gotvalidserver ||
 	    !(newconn = new_socks_request(__fd, connaddr, &server_address, path))) {
 	errno = ECONNREFUSED;
-	return(-1);
+	return -1;
     } else {
 	/* Now we call the main function to handle the connect. */
 	rc = handle_request(newconn);
@@ -333,7 +333,7 @@ int connect(CONNECT_SIGNATURE) {
 	if ((newconn->state == FAILED) || (newconn->state == DONE))
 	    kill_socks_request(newconn);
 	errno = rc;
-	return((rc ? -1 : 0));
+	return (rc ? -1 : 0);
     }
 }
 
@@ -348,7 +348,7 @@ int select(SELECT_SIGNATURE) {
     /* If we're not currently managing any requests we can just
      * leave here */
     if (!requests)
-	return(realselect(n, readfds, writefds, exceptfds, timeout));
+	return realselect(n, readfds, writefds, exceptfds, timeout);
 
     get_environment();
 
@@ -372,7 +372,7 @@ int select(SELECT_SIGNATURE) {
     }
 
     if (!monitoring)
-	return(realselect(n, readfds, writefds, exceptfds, timeout));
+	return realselect(n, readfds, writefds, exceptfds, timeout);
 
     /* This is our select loop. In it we repeatedly call select(). We
      * pass select the same fdsets as provided by the caller except we
@@ -517,7 +517,7 @@ int select(SELECT_SIGNATURE) {
     if (exceptfds)
 	memcpy(exceptfds, &myexceptfds, sizeof(myexceptfds));
 
-    return(nevents);
+    return nevents;
 }
 
 int poll(POLL_SIGNATURE) {
@@ -530,7 +530,7 @@ int poll(POLL_SIGNATURE) {
     /* If we're not currently managing any requests we can just
      * leave here */
     if (!requests)
-	return(realpoll(ufds, nfds, timeout));
+	return realpoll(ufds, nfds, timeout);
 
     get_environment();
 
@@ -552,7 +552,7 @@ int poll(POLL_SIGNATURE) {
     }
 
     if (!monitoring)
-	return(realpoll(ufds, nfds, timeout));
+	return realpoll(ufds, nfds, timeout);
 
     /* This is our poll loop. In it we repeatedly call poll(). We
      * pass select the same event list as provided by the caller except we
@@ -674,7 +674,7 @@ int poll(POLL_SIGNATURE) {
 	ufds[i].events = conn->selectevents;
     }
 
-    return(nevents);
+    return nevents;
 }
 
 int close(CLOSE_SIGNATURE) {
@@ -683,7 +683,7 @@ int close(CLOSE_SIGNATURE) {
 
     if (realclose == NULL) {
 	show_msg(MSGERR, "Unresolved symbol: close\n");
-	return(-1);
+	return -1;
     }
 
     show_msg(MSGDEBUG, "Call to close(%d)\n", fd);
@@ -699,7 +699,7 @@ int close(CLOSE_SIGNATURE) {
 	kill_socks_request(conn);
     }
 
-    return(rc);
+    return rc;
 }
 
 static struct connreq *new_socks_request(int sockid, struct sockaddr_in *connaddr,
@@ -710,7 +710,7 @@ static struct connreq *new_socks_request(int sockid, struct sockaddr_in *connadd
     if ((newconn = malloc(sizeof(*newconn))) == NULL) {
 	/* Could not malloc, we're stuffed */
 	show_msg(MSGERR, "Could not allocate memory for new socks request\n");
-	return(NULL);
+	return NULL;
     }
 
     /* Add this connection to be proxied to the list */
@@ -723,7 +723,7 @@ static struct connreq *new_socks_request(int sockid, struct sockaddr_in *connadd
     newconn->next = requests;
     requests = newconn;
 
-    return(newconn);
+    return newconn;
 }
 
 static void kill_socks_request(struct connreq *conn) {
@@ -752,11 +752,11 @@ static struct connreq *find_socks_request(int sockid, int includefinished) {
 		    !includefinished)
 		break;
 	    else
-		return(connnode);
+		return connnode;
 	}
     }
 
-    return(NULL);
+    return NULL;
 }
 
 static int handle_request(struct connreq *conn) {
@@ -837,7 +837,7 @@ static int handle_request(struct connreq *conn) {
 
     show_msg(MSGDEBUG, "Handle loop completed for socket %d in state %d, "
 	    "returning %d\n", conn->sockid, conn->state, rc);
-    return(rc);
+    return rc;
 }
 
 static int connect_server(struct connreq *conn) {
@@ -865,7 +865,7 @@ static int connect_server(struct connreq *conn) {
 	conn->state = CONNECTED;
     }
 
-    return((rc ? errno : 0));
+    return (rc ? errno : 0);
 }
 
 static int send_socks_request(struct connreq *conn) {
@@ -876,7 +876,7 @@ static int send_socks_request(struct connreq *conn) {
     else
 	rc = send_socksv5_method(conn);
 
-    return(rc);
+    return rc;
 }
 
 static int send_socksv4_request(struct connreq *conn) {
@@ -895,7 +895,7 @@ static int send_socksv4_request(struct connreq *conn) {
     if (sizeof(conn->buffer) < conn->datalen) {
 	show_msg(MSGERR, "The SOCKS username is too long");
 	conn->state = FAILED;
-	return(ECONNREFUSED);
+	return ECONNREFUSED;
     }
 
     /* Create the request */
@@ -912,7 +912,7 @@ static int send_socksv4_request(struct connreq *conn) {
     conn->state = SENDING;
     conn->nextstate = SENTV4REQ;
 
-    return(0);
+    return 0;
 }
 
 static int send_socksv5_method(struct connreq *conn) {
@@ -928,7 +928,7 @@ static int send_socksv5_method(struct connreq *conn) {
     conn->datalen = sizeof(verstring);
     conn->datadone = 0;
 
-    return(0);
+    return 0;
 }
 
 static int send_socksv5_connect(struct connreq *conn) {
@@ -949,7 +949,7 @@ static int send_socksv5_connect(struct connreq *conn) {
     memcpy(&conn->buffer[conn->datalen], &(conn->connaddr.sin_port), sizeof(conn->connaddr.sin_port));
     conn->datalen += sizeof(conn->connaddr.sin_port);
 
-    return(0);
+    return 0;
 }
 
 static int send_buffer(struct connreq *conn) {
@@ -974,7 +974,7 @@ static int send_buffer(struct connreq *conn) {
 
     show_msg(MSGDEBUG, "Sent %d bytes of %d bytes in buffer, return code is %d\n",
 	    conn->datadone, conn->datalen, rc);
-    return(rc);
+    return rc;
 }
 
 static int recv_buffer(struct connreq *conn) {
@@ -999,7 +999,7 @@ static int recv_buffer(struct connreq *conn) {
 
     show_msg(MSGDEBUG, "Received %d bytes of %d bytes expected, return code is %d\n",
 	    conn->datadone, conn->datalen, rc);
-    return(rc);
+    return rc;
 }
 
 static int read_socksv5_method(struct connreq *conn) {
@@ -1010,7 +1010,7 @@ static int read_socksv5_method(struct connreq *conn) {
     if (conn->buffer[1] == '\xff') {
 	show_msg(MSGERR, "SOCKS V5 server refused authentication methods\n");
 	conn->state = FAILED;
-	return(ECONNREFUSED);
+	return ECONNREFUSED;
     }
 
     /* If the socks server chose username/password authentication */
@@ -1029,7 +1029,7 @@ static int read_socksv5_method(struct connreq *conn) {
 		    "or $TSOCKS_USERNAME to authenticate "
 		    "with");
 	    conn->state = FAILED;
-	    return(ECONNREFUSED);
+	    return ECONNREFUSED;
 	}
 
 	if (((upass = getenv("TSOCKS_PASSWORD")) == NULL) &&
@@ -1037,7 +1037,7 @@ static int read_socksv5_method(struct connreq *conn) {
 	    show_msg(MSGERR, "Need a password in tsocks.conf or "
 		    "$TSOCKS_PASSWORD to authenticate with");
 	    conn->state = FAILED;
-	    return(ECONNREFUSED);
+	    return ECONNREFUSED;
 	}
 
 	/* Check that the username / pass specified will */
@@ -1046,7 +1046,7 @@ static int read_socksv5_method(struct connreq *conn) {
 	    show_msg(MSGERR, "The supplied socks username or "
 		    "password is too long");
 	    conn->state = FAILED;
-	    return(ECONNREFUSED);
+	    return ECONNREFUSED;
 	}
 
 	conn->datalen = 0;
@@ -1065,9 +1065,9 @@ static int read_socksv5_method(struct connreq *conn) {
 	conn->nextstate = SENTV5AUTH;
 	conn->datadone = 0;
     } else
-	return(send_socksv5_connect(conn));
+	return send_socksv5_connect(conn);
 
-    return(0);
+    return 0;
 }
 
 static int read_socksv5_auth(struct connreq *conn) {
@@ -1075,11 +1075,11 @@ static int read_socksv5_auth(struct connreq *conn) {
     if (conn->buffer[1] != '\x00') {
 	show_msg(MSGERR, "SOCKS authentication failed, check username and password\n");
 	conn->state = FAILED;
-	return(ECONNREFUSED);
+	return ECONNREFUSED;
     }
 
     /* Ok, we authenticated ok, send the connection request */
-    return(send_socksv5_connect(conn));
+    return send_socksv5_connect(conn);
 }
 
 static int read_socksv5_connect(struct connreq *conn) {
@@ -1091,37 +1091,37 @@ static int read_socksv5_connect(struct connreq *conn) {
 	switch ((int8_t) conn->buffer[1]) {
 	    case 1:
 		show_msg(MSGERR, "General SOCKS server failure\n");
-		return(ECONNABORTED);
+		return ECONNABORTED;
 	    case 2:
 		show_msg(MSGERR, "Connection denied by rule\n");
-		return(ECONNABORTED);
+		return ECONNABORTED;
 	    case 3:
 		show_msg(MSGERR, "Network unreachable\n");
-		return(ENETUNREACH);
+		return ENETUNREACH;
 	    case 4:
 		show_msg(MSGERR, "Host unreachable\n");
-		return(EHOSTUNREACH);
+		return EHOSTUNREACH;
 	    case 5:
 		show_msg(MSGERR, "Connection refused\n");
-		return(ECONNREFUSED);
+		return ECONNREFUSED;
 	    case 6:
 		show_msg(MSGERR, "TTL Expired\n");
-		return(ETIMEDOUT);
+		return ETIMEDOUT;
 	    case 7:
 		show_msg(MSGERR, "Command not supported\n");
-		return(ECONNABORTED);
+		return ECONNABORTED;
 	    case 8:
 		show_msg(MSGERR, "Address type not supported\n");
-		return(ECONNABORTED);
+		return ECONNABORTED;
 	    default:
 		show_msg(MSGERR, "Unknown error\n");
-		return(ECONNABORTED);
+		return ECONNABORTED;
 	}
     }
 
     conn->state = DONE;
 
-    return(0);
+    return 0;
 }
 
 static int read_socksv4_req(struct connreq *conn) {
@@ -1135,26 +1135,26 @@ static int read_socksv4_req(struct connreq *conn) {
 	switch(thisrep->result) {
 	    case 91:
 		show_msg(MSGERR, "SOCKS server refused connection\n");
-		return(ECONNREFUSED);
+		return ECONNREFUSED;
 	    case 92:
 		show_msg(MSGERR, "SOCKS server refused connection "
 			"because of failed connect to identd "
 			"on this machine\n");
-		return(ECONNREFUSED);
+		return ECONNREFUSED;
 	    case 93:
 		show_msg(MSGERR, "SOCKS server refused connection "
 			"because identd and this library "
 			"reported different user-ids\n");
-		return(ECONNREFUSED);
+		return ECONNREFUSED;
 	    default:
 		show_msg(MSGERR, "Unknown reason\n");
-		return(ECONNREFUSED);
+		return ECONNREFUSED;
 	}
     }
 
     conn->state = DONE;
 
-    return(0);
+    return 0;
 }
 
 #ifdef USE_SOCKS_DNS
@@ -1163,7 +1163,7 @@ int res_init(void) {
 
     if (realresinit == NULL) {
 	show_msg(MSGERR, "Unresolved symbol: res_init\n");
-	return(-1);
+	return -1;
     }
 
     /* Call normal res_init */
@@ -1172,7 +1172,7 @@ int res_init(void) {
     /* Force using TCP protocol for DNS queries */
     _res.options |= RES_USEVC;
 
-    return(rc);
+    return rc;
 }
 #endif
 

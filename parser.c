@@ -85,7 +85,7 @@ int read_config (char *filename, struct parsedfile *config) {
 
     }
 
-    return(rc);
+    return rc;
 }
 
 /* Check server entries (and establish defaults) */
@@ -101,7 +101,7 @@ static int check_server(struct serverent *server) {
 	server->type = 4;
     }
 
-    return(0);
+    return 0;
 }
 
 
@@ -159,7 +159,7 @@ static int handle_line(struct parsedfile *config, char *line, int lineno) {
 	}
     }
 
-    return(0);
+    return 0;
 }
 
 /* This routines breaks up input lines into tokens  */
@@ -187,7 +187,7 @@ static int tokenize(char *line, int arrsize, char *tokens[]) {
 	}
     }
 
-    return(tokenno + 1);
+    return tokenno + 1;
 }
 
 static int handle_path(struct parsedfile *config, int lineno, int nowords, char *words[]) {
@@ -218,7 +218,7 @@ static int handle_path(struct parsedfile *config, int lineno, int nowords, char 
 	currentcontext = newserver;
     }
 
-    return(0);
+    return 0;
 }
 
 static int handle_endpath(struct parsedfile *config, int lineno, int nowords, char *words[]) {
@@ -235,7 +235,7 @@ static int handle_endpath(struct parsedfile *config, int lineno, int nowords, ch
     /* the completed path here, but thats what verifyconf is    */
     /* designed to do, no point in weighing down libtsocks      */
 
-    return(0);
+    return 0;
 }
 
 static int handle_reaches(struct parsedfile *config, int lineno, char *value) {
@@ -249,46 +249,46 @@ static int handle_reaches(struct parsedfile *config, int lineno, char *value) {
 		    "constructed in reach statement on line "
 		    "%d in configuration "
 		    "file\n", value, lineno);
-	    return(0);
+	    return 0;
 	    break;
 	case 2:
 	    show_msg(MSGERR, "IP in reach statement "
 		    "network specification (%s) is not valid on line "
 		    "%d in configuration file\n", value, lineno);
-	    return(0);
+	    return 0;
 	    break;
 	case 3:
 	    show_msg(MSGERR, "SUBNET in reach statement "
 		    "network specification (%s) is not valid on "
 		    "line %d in configuration file\n", value,
 		    lineno);
-	    return(0);
+	    return 0;
 	    break;
 	case 4:
 	    show_msg(MSGERR, "IP (%s) & ", inet_ntoa(ent->localip));
 	    show_msg(MSGERR, "SUBNET (%s) != IP on line %d in "
 		    "configuration file, ignored\n",
 		    inet_ntoa(ent->localnet), lineno);
-	    return(0);
+	    return 0;
 	    break;
 	case 5:
 	    show_msg(MSGERR, "Start port in reach statement "
 		    "network specification (%s) is not valid on line "
 		    "%d in configuration file\n", value, lineno);
-	    return(0);
+	    return 0;
 	    break;
 	case 6:
 	    show_msg(MSGERR, "End port in reach statement "
 		    "network specification (%s) is not valid on line "
 		    "%d in configuration file\n", value, lineno);
-	    return(0);
+	    return 0;
 	    break;
 	case 7:
 	    show_msg(MSGERR, "End port in reach statement "
 		    "network specification (%s) is less than the start "
 		    "port on line %d in configuration file\n", value,
 		    lineno);
-	    return(0);
+	    return 0;
 	    break;
     }
 
@@ -296,7 +296,7 @@ static int handle_reaches(struct parsedfile *config, int lineno, char *value) {
     ent -> next = currentcontext -> reachnets;
     currentcontext -> reachnets = ent;
 
-    return(0);
+    return 0;
 }
 
 static int handle_server(struct parsedfile *config, int lineno, char *value) {
@@ -320,7 +320,7 @@ static int handle_server(struct parsedfile *config, int lineno, char *value) {
 		    lineno, currentcontext->lineno);
     }
 
-    return(0);
+    return 0;
 }
 
 static int handle_port(struct parsedfile *config, int lineno, char *value) {
@@ -347,7 +347,7 @@ static int handle_port(struct parsedfile *config, int lineno, char *value) {
 	}
     }
 
-    return(0);
+    return 0;
 }
 
 static int handle_defuser(struct parsedfile *config, int lineno, char *value) {
@@ -366,7 +366,7 @@ static int handle_defuser(struct parsedfile *config, int lineno, char *value) {
 	currentcontext->defuser = strdup(value);
     }
 
-    return(0);
+    return 0;
 }
 
 static int handle_defpass(struct parsedfile *config, int lineno, char *value) {
@@ -385,7 +385,7 @@ static int handle_defpass(struct parsedfile *config, int lineno, char *value) {
 	currentcontext->defpass = strdup(value);
     }
 
-    return(0);
+    return 0;
 }
 
 static int handle_type(struct parsedfile *config, int lineno, char *value) {
@@ -413,7 +413,7 @@ static int handle_type(struct parsedfile *config, int lineno, char *value) {
 	}
     }
 
-    return(0);
+    return 0;
 }
 
 static int handle_local(struct parsedfile *config, int lineno, char *value) {
@@ -425,7 +425,7 @@ static int handle_local(struct parsedfile *config, int lineno, char *value) {
 		"block at like %d in configuration file. "
 		"(Path block started at line %d)\n",
 		lineno, currentcontext->lineno);
-	return(0);
+	return 0;
     }
 
     rc = make_netent(value, &ent);
@@ -434,27 +434,27 @@ static int handle_local(struct parsedfile *config, int lineno, char *value) {
 	    show_msg(MSGERR, "Local network specification (%s) is not validly "
 		    "constructed on line %d in configuration "
 		    "file\n", value, lineno);
-	    return(0);
+	    return 0;
 	    break;
 	case 2:
 	    show_msg(MSGERR, "IP for local "
 		    "network specification (%s) is not valid on line "
 		    "%d in configuration file\n", value, lineno);
-	    return(0);
+	    return 0;
 	    break;
 	case 3:
 	    show_msg(MSGERR, "SUBNET for "
 		    "local network specification (%s) is not valid on "
 		    "line %d in configuration file\n", value,
 		    lineno);
-	    return(0);
+	    return 0;
 	    break;
 	case 4:
 	    show_msg(MSGERR, "IP (%s) & ", inet_ntoa(ent->localip));
 	    show_msg(MSGERR, "SUBNET (%s) != IP on line %d in "
 		    "configuration file, ignored\n",
 		    inet_ntoa(ent->localnet), lineno);
-	    return(0);
+	    return 0;
 	case 5:
 	case 6:
 	case 7:
@@ -462,7 +462,7 @@ static int handle_local(struct parsedfile *config, int lineno, char *value) {
 		    "not allowed in local network specification "
 		    "(%s) on line %d in configuration file\n",
 		    value, lineno);
-	    return(0);
+	    return 0;
 	    break;
     }
 
@@ -471,14 +471,14 @@ static int handle_local(struct parsedfile *config, int lineno, char *value) {
 		"not allowed in local network specification "
 		"(%s) on line %d in configuration file\n",
 		value, lineno);
-	return(0);
+	return 0;
     }
 
     /* The entry is valid so add it to linked list */
     ent -> next = config->localnets;
     (config->localnets) = ent;
 
-    return(0);
+    return 0;
 }
 
 /* Construct a netent given a string like                             */
@@ -511,7 +511,7 @@ int make_netent(char *value, struct netent **ent) {
 
     if ((ip == NULL) || (subnet == NULL)) {
 	/* Network specification not validly constructed */
-	return(1);
+	return 1;
     }
 
     /* Allocate the new entry */
@@ -535,7 +535,7 @@ int make_netent(char *value, struct netent **ent) {
 #endif
 	/* Badly constructed IP */
 	free(*ent);
-	return(2);
+	return 2;
     }
 #ifdef HAVE_INET_ADDR
     else if (((*ent)->localnet.s_addr = inet_addr(subnet)) == -1) {
@@ -544,35 +544,35 @@ int make_netent(char *value, struct netent **ent) {
 #endif
 	/* Badly constructed subnet */
 	free(*ent);
-	return(3);
+	return 3;
     } else if (((*ent)->localip.s_addr &
 		(*ent)->localnet.s_addr) !=
 	    (*ent)->localip.s_addr) {
 	/* Subnet and Ip != Ip */
 	free(*ent);
-	return(4);
+	return 4;
     } else if (startport &&
 	    (!((*ent)->startport = strtol(startport, &badchar, 10)) ||
 	     (*badchar != 0) || ((*ent)->startport > 65535))) {
 	/* Bad start port */
 	free(*ent);
-	return(5);
+	return 5;
     } else if (endport &&
 	    (!((*ent)->endport = strtol(endport, &badchar, 10)) ||
 	     (*badchar != 0) || ((*ent)->endport > 65535))) {
 	/* Bad end port */
 	free(*ent);
-	return(6);
+	return 6;
     } else if (((*ent)->startport > (*ent)->endport) && !(startport && !endport)) {
 	/* End port is less than start port */
 	free(*ent);
-	return(7);
+	return 7;
     }
 
     if (startport && !endport)
 	(*ent)->endport = (*ent)->startport;
 
-    return(0);
+    return 0;
 }
 
 int is_local(struct parsedfile *config, struct in_addr *testip) {
@@ -581,11 +581,11 @@ int is_local(struct parsedfile *config, struct in_addr *testip) {
     for (ent = (config->localnets); ent != NULL; ent = ent -> next) {
 	if ((testip->s_addr & ent->localnet.s_addr) ==
 		(ent->localip.s_addr & ent->localnet.s_addr))  {
-	    return(0);
+	    return 0;
 	}
     }
 
-    return(1);
+    return 1;
 }
 
 /* Find the appropriate server to reach an ip */
@@ -613,7 +613,7 @@ int pick_server(struct parsedfile *config, struct serverent **ent,
 	    {
 		show_msg(MSGDEBUG, "This server can reach target\n");
 		/* Found the net, return */
-		return(0);
+		return 0;
 	    }
 	    net = net->next;
 	}
@@ -622,7 +622,7 @@ int pick_server(struct parsedfile *config, struct serverent **ent,
 
     *ent = &(config->defaultserver);
 
-    return(0);
+    return 0;
 }
 
 /* This function is very much like strsep, it looks in a string for */
@@ -642,7 +642,7 @@ char *strsplit(char *separator, char **text, const char *search) {
     if (*text == NULL) {
 	if (separator)
 	    *separator = '\0';
-	return(NULL);
+	return NULL;
     } else {
 	len = strcspn(*text, search);
 	if (len == strlen(*text)) {
@@ -658,7 +658,7 @@ char *strsplit(char *separator, char **text, const char *search) {
 	}
     }
 
-    return(ret);
+    return ret;
 }
 
 /*

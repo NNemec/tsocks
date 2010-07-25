@@ -35,7 +35,7 @@ unsigned int resolve_ip(char *host, int showmsg, int allownames) {
 #ifdef HAVE_GETHOSTBYNAME
 	    if ((new = gethostbyname(host)) == (struct hostent *) 0) {
 #endif
-		return(-1);
+		return -1;
 #ifdef HAVE_GETHOSTBYNAME
 	    } else {
 		ip = ((struct in_addr *) * new->h_addr_list);
@@ -45,7 +45,7 @@ unsigned int resolve_ip(char *host, int showmsg, int allownames) {
 	    }
 #endif
 	} else
-	    return(-1);
+	    return -1;
     }
 
     return hostaddr;

@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     else
 	test_host(&config, testhost);
 
-    return(0);
+    return 0;
 }
 
 void test_host(struct parsedfile *config, char *host) {
