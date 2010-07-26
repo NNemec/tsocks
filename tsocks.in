@@ -11,10 +11,10 @@ Usage: $0 [options] [--] program [arguments...]
 -h, --help
 	Shows this message.
 
--c, --conf
+-c FILE, --conf FILE
 	Use specified configuration file instead of /etc/tsocks.conf.
 
--d n, --debug n
+-d N, --debug N
 	Set debug level.
 
 -f FILE, --debug-file FILE
