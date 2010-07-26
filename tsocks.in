@@ -6,7 +6,7 @@ tsocks="@prefix@/lib/libtsocks.so"
 
 usage () {
   cat << EOF
-Usage: $0 [options] [--] program [arguments...]
+Usage: $0 [options] [--] command [arguments...]
 
 -h, --help
 	Shows this message.
@@ -110,10 +110,8 @@ enable
 
 if [ $# = 0 ]
 then
-  ${SHELL:-/bin/sh}
-fi
-
-if [ $# -gt 0 ]
-then
+  usage
+  exit 1
+else
   exec "$@"
 fi
