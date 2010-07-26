@@ -66,7 +66,7 @@ static int suid = 0;
 static char *conffile = NULL;
 
 /* Exported Function Prototypes */
-void _init(void);
+void __attribute__((constructor)) tsocks_init(void);
 int connect(CONNECT_SIGNATURE);
 int select(SELECT_SIGNATURE);
 int poll(POLL_SIGNATURE);
@@ -98,7 +98,7 @@ static int read_socksv4_req(struct connreq *conn);
 static int read_socksv5_connect(struct connreq *conn);
 static int read_socksv5_auth(struct connreq *conn);
 
-void _init(void) {
+void __attribute__((constructor)) tsocks_init(void) {
 #ifdef USE_OLD_DLSYM
     void *lib;
 #endif
