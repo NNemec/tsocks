@@ -5,27 +5,26 @@
 tsocks="@prefix@/lib/libtsocks.so"
 
 usage () {
-  cat << EOF
-Usage: $0 [options] [--] command [arguments...]
-
--h, --help
-	Shows this message.
-
--c FILE, --conf FILE
-	Use specified configuration file instead of /etc/tsocks.conf.
-
--d N, --debug N
-	Set debug level.
-
--f FILE, --debug-file FILE
-	Output debug messages to specified file.
-
--u USERNAME, --username USERNAME
-	Set SOCKS username.
-
--p PASSWORD, --password PASSWORD
-	Set SOCKS password.
-EOF
+  echo "Usage: $0 [options] [--] command [arguments...]"
+  echo
+  echo "Options:"
+  echo -e "\t-h, --help"
+  echo -e "\t\tShows this message."
+  echo
+  echo -e "\t-c FILE, --conf FILE"
+  echo -e "\t\tUse specified configuration file instead of /etc/tsocks.conf."
+  echo
+  echo -e "\t-d N, --debug N"
+  echo -e "\t\tSet debug level."
+  echo
+  echo -e "\t-f FILE, --debug-file FILE"
+  echo -e "\t\tOutput debug messages to specified file."
+  echo
+  echo -e "\t-u USERNAME, --username USERNAME"
+  echo -e "\t\tSet SOCKS username."
+  echo
+  echo -e "\t-p PASSWORD, --password PASSWORD"
+  echo -e "\t\tSet SOCKS password."
 }
 
 enable () {
