@@ -50,8 +50,7 @@ $(SAVE): $(SAVE).c
 	$(SHCC) $(CFLAGS) $(INCLUDES) -static -o $(SAVE) $(SAVE).c
 
 $(SHLIB): $(OBJS) $(COMMON).o $(PARSER).o
-	$(SHCC) $(CFLAGS) $(INCLUDES) -o $(SHLIB) $(OBJS) $(COMMON).o $(PARSER).o $(DYNLIB_FLAGS) $(SPECIALLIBS) $(LIBS) -rdynamic
-	ln -sf $(SHLIB) $(LIB_NAME).so
+	$(SHCC) -shared -Wl,-soname,$(SONAME) $(CFLAGS) $(INCLUDES) -o $(SHLIB) $(OBJS) $(COMMON).o $(PARSER).o $(SPECIALLIBS) $(LIBS) -rdynamic
 
 %.so: %.c
 	$(SHCC) $(CFLAGS) $(INCLUDES) -c $(CC_SWITCHES) $< -o $@
