@@ -24,6 +24,7 @@ SCRIPT = tsocks
 SHLIB_MAJOR = 1
 SHLIB_MINOR = 8
 SHLIB = $(LIB_NAME).so.$(SHLIB_MAJOR).$(SHLIB_MINOR)
+SONAME = $(LIB_NAME).so.$(SHLIB_MAJOR)
 
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -68,7 +69,7 @@ installlib:
 	$(MKINSTALLDIRS) "$(DESTDIR)$(libdir)"
 	$(INSTALL) $(SHLIB) $(DESTDIR)$(libdir)
 	ln -sf $(SHLIB) $(DESTDIR)$(libdir)/$(LIB_NAME).so.$(SHLIB_MAJOR)
-	ln -sf $(LIB_NAME).so.$(SHLIB_MAJOR) $(DESTDIR)$(libdir)/$(LIB_NAME).so
+	ln -sf $(SONAME) $(DESTDIR)$(libdir)/$(LIB_NAME).so
 
 installman:
 	$(MKINSTALLDIRS) "$(DESTDIR)$(mandir)/man1"
