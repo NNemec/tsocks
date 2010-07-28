@@ -74,11 +74,11 @@ installlib:
 
 installman:
 	$(MKINSTALLDIRS) "$(DESTDIR)$(mandir)/man1"
-	$(INSTALL_DATA) tsocks.1 $(DESTDIR)$(mandir)/man1/
+	$(INSTALL_DATA) Doc/tsocks.1 $(DESTDIR)$(mandir)/man1/
 	$(MKINSTALLDIRS) "$(DESTDIR)$(mandir)/man8"
-	$(INSTALL_DATA) tsocks.8 $(DESTDIR)$(mandir)/man8/
+	$(INSTALL_DATA) Doc/tsocks.8 $(DESTDIR)$(mandir)/man8/
 	$(MKINSTALLDIRS) "$(DESTDIR)$(mandir)/man5"
-	$(INSTALL_DATA) tsocks.conf.5 $(DESTDIR)$(mandir)/man5/
+	$(INSTALL_DATA) Doc/tsocks.conf.5 $(DESTDIR)$(mandir)/man5/
 
 clean:
 	-rm -f *.so *.so.* *.o *~ $(TARGETS)
