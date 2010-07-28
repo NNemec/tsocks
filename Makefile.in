@@ -21,10 +21,11 @@ COMMON = common
 PARSER = parser
 VALIDATECONF = validateconf
 SCRIPT = tsocks
-SHLIB_MAJOR = 1
-SHLIB_MINOR = 8
-SHLIB = $(LIB_NAME).so.$(SHLIB_MAJOR).$(SHLIB_MINOR)
-SONAME = $(LIB_NAME).so.$(SHLIB_MAJOR)
+MAJOR = 1
+MINOR = 9
+SHLIB = $(LIB_NAME).so
+SHLIB_MAJOR = $(SHLIB).$(MAJOR)
+SHLIB_MAJOR_MINOR = $(SHLIB_MAJOR).$(MINOR)
 
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -37,7 +38,7 @@ SHOBJS = $(OBJS:.o=.so)
 
 OBJS= tsocks.o
 
-TARGETS= $(SHLIB) $(UTIL_LIB) $(SAVE) $(INSPECT) $(VALIDATECONF)
+TARGETS= $(SHLIB_MAJOR_MINOR) $(UTIL_LIB) $(SAVE) $(INSPECT) $(VALIDATECONF)
 
 all: $(TARGETS)
 
@@ -50,8 +51,8 @@ $(INSPECT): $(INSPECT).c $(COMMON).o
 $(SAVE): $(SAVE).c
 	$(SHCC) $(CFLAGS) $(INCLUDES) -static -o $(SAVE) $(SAVE).c
 
-$(SHLIB): $(OBJS) $(COMMON).o $(PARSER).o
-	$(SHCC) -shared -Wl,-soname,$(SONAME) $(CFLAGS) $(INCLUDES) -o $(SHLIB) $(OBJS) $(COMMON).o $(PARSER).o $(SPECIALLIBS) $(LIBS) -rdynamic
+$(SHLIB_MAJOR_MINOR): $(OBJS) $(COMMON).o $(PARSER).o
+	$(SHCC) -shared -Wl,-soname,$(SHLIB_MAJOR) $(CFLAGS) $(INCLUDES) -o $(SHLIB_MAJOR_MINOR) $(OBJS) $(COMMON).o $(PARSER).o $(SPECIALLIBS) $(LIBS) -rdynamic
 
 %.so: %.c
 	$(SHCC) $(CFLAGS) $(INCLUDES) -c $(CC_SWITCHES) $< -o $@
@@ -67,9 +68,9 @@ installscript:
 
 installlib:
 	$(MKINSTALLDIRS) "$(DESTDIR)$(libdir)"
-	$(INSTALL) $(SHLIB) $(DESTDIR)$(libdir)
-	ln -sf $(SHLIB) $(DESTDIR)$(libdir)/$(LIB_NAME).so.$(SHLIB_MAJOR)
-	ln -sf $(SONAME) $(DESTDIR)$(libdir)/$(LIB_NAME).so
+	$(INSTALL) $(SHLIB_MAJOR_MINOR) $(DESTDIR)$(libdir)
+	ln -sf $(DESTDIR)$(libdir)/$(SHLIB_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(SHLIB_MAJOR)
+	ln -sf $(DESTDIR)$(libdir)/$(SHLIB_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(SHLIB) 
 
 installman:
 	$(MKINSTALLDIRS) "$(DESTDIR)$(mandir)/man1"
