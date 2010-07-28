@@ -69,8 +69,8 @@ installscript:
 installlib:
 	$(MKINSTALLDIRS) "$(DESTDIR)$(libdir)"
 	$(INSTALL) $(SHLIB_MAJOR_MINOR) $(DESTDIR)$(libdir)
-	ln -sf $(DESTDIR)$(libdir)/$(SHLIB_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(SHLIB_MAJOR)
-	ln -sf $(DESTDIR)$(libdir)/$(SHLIB_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(SHLIB) 
+	ln -sf $(SHLIB_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(SHLIB_MAJOR)
+	ln -sf $(SHLIB_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(SHLIB)
 
 installman:
 	$(MKINSTALLDIRS) "$(DESTDIR)$(mandir)/man1"
