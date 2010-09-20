@@ -237,7 +237,8 @@ static int handle_path(struct parsedfile *config, int lineno, int nowords, char 
     } else {
 	/* Open up a new serverent, put it on the list   */
 	/* then set the current context                  */
-	if (((int) (newserver = (struct serverent *) malloc(sizeof(struct serverent)))) == -1)
+	if ( (newserver = (struct serverent *) malloc(sizeof(struct serverent))) == NULL)
+	    /* If we couldn't malloc some storage, leave */
 	    exit(-1);
 
 	/* Initialize the structure */
