@@ -292,18 +292,28 @@ int connect(CONNECT_SIGNATURE) {
     show_msg(MSGDEBUG, "Picked server %s for connection\n",
 	    (path->address ? path->address : "(Not Provided)"));
     if (path->address == NULL) {
-	if (path == &(config->defaultserver))
+        if (path == &(config->defaultserver)) {
+            if (config->fallback) {
+                show_msg(MSGERR, "Connection needs to be made "
+                                 "via default server but "
+                                 "the default server has not "
+                                 "been specified. Fallback is 'yes' so "
+                                 "Falling back to direct connection.\n");
+                return(realconnect(__fd, __addr, __len));
+            } else {
+                show_msg(MSGERR, "Connection needs to be made "
+                                 "via default server but "
+                                 "the default server has not "
+                                 "been specified. Fallback is 'no' so "
+                                 "coudln't establish the connection.\n");
+            }
+        } else
 	    show_msg(MSGERR, "Connection needs to be made "
-		    "via default server but "
-		    "the default server has not "
-		    "been specified\n");
-	else
-	    show_msg(MSGERR, "Connection needs to be made "
-		    "via path specified at line "
-		    "%d in configuration file but "
-		    "the server has not been "
-		    "specified for this path\n",
-		    path->lineno);
+                             "via path specified at line "
+                             "%d in configuration file but "
+                             "the server has not been "
+                             "specified for this path\n",
+                             path->lineno);
     } else if ((res = resolve_ip(path->address, 0, HOSTNAMES)) == -1) {
 	show_msg(MSGERR, "The SOCKS server (%s) listed in the configuration "
 		"file which needs to be used for this connection "
