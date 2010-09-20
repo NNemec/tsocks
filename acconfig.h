@@ -46,11 +46,6 @@ allows socksified DNS */
 /* Prototype and function header for getpeername function */
 #undef GETPEERNAME_SIGNATURE
 
-/* Work out which function we have for conversion from string IPs to 
-numerical ones */
-#undef HAVE_INET_ADDR
-#undef HAVE_INET_ATON
-
 /* We use strsep which isn't on all machines, but we provide our own
 definition of it for those which don't have it, this causes us to define
 our version */
@@ -60,10 +55,3 @@ our version */
 servers. This doesn't work if socksified DNS is enabled for obvious
 reasons, it also introduces overhead, but people seem to want it */
 #define HOSTNAMES 0
-
-/* We need the gethostbyname() function to do dns lookups in tsocks or 
-in inspectsocks */
-#undef HAVE_GETHOSTBYNAME
-
-/* Location of configuration file (typically /etc/tsocks.conf) */
-#undef CONF_FILE 
