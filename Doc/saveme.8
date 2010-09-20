@@ -1,0 +1,15 @@
+.TH saveme 8 "" "saveme"
+
+.SH NAME
+.BR saveme 
+\- unlink ld.so.preload
+.RB
+.SH DESCRIPTION
+.B saveme
+is part of the tsocks package This program is designed to be statically linked so
+that if a user breaks their ld.so.preload file and cannot run any dynamically
+linked program it can delete the offending ld.so.preload file.
+.PP
+.SH AUTHOR
+This manpage was created by Nico Golde <nion@debian.org> for the debian
+package of tsocks.
