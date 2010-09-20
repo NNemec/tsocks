@@ -4,10 +4,13 @@
 
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <arpa/inet.h>
+#include <pwd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <errno.h>
 #include <config.h>
 #include "common.h"
@@ -31,6 +34,32 @@ static int handle_defuser(struct parsedfile *, int, char *);
 static int handle_defpass(struct parsedfile *, int, char *);
 static int make_netent(char *value, struct netent **ent);
 
+char __attribute__ ((visibility ("hidden")))
+*find_config(char *line) {
+	struct passwd* pw;
+
+	errno = 0;
+
+	pw = getpwuid(getuid());
+	if (errno) {
+		perror("getpwuid");
+		return NULL;
+	}
+
+	/* check for config in $HOME */
+	snprintf(line, MAXLINE - 1, "%s/.tsocks.conf", pw->pw_dir);
+
+	if (access(line, R_OK)) {
+		show_msg(MSGDEBUG, "Can't access %s, using " CONF_FILE " instead.\n", line);
+		strncpy(line, CONF_FILE, MAXLINE - 1);
+	}
+
+	/* Insure null termination */
+	line[MAXLINE - 1] = (char) 0;
+
+	return line;
+}
+
 int __attribute__ ((visibility ("hidden")))
 read_config (char *filename, struct parsedfile *config) {
     FILE *conf;
@@ -47,11 +76,10 @@ read_config (char *filename, struct parsedfile *config) {
 
     /* If a filename wasn't provided, use the default */
     if (filename == NULL) {
-	strncpy(line, CONF_FILE, sizeof(line) - 1);
-	/* Insure null termination */
-	line[sizeof(line) - 1] = (char) 0;
-	filename = line;
+        filename = find_config(line);
     }
+
+    show_msg(MSGDEBUG, "using %s as configuration file\n", line);
 
     /* Read the configuration file */
     if ((conf = fopen(filename, "r")) == NULL) {

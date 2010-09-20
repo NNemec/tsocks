@@ -34,13 +34,13 @@ manual page.
 
 .BR tsocks
 is a library to allow transparent SOCKS proxying. It wraps the normal
-connect() function. When a connection is attempted, it consults the 
-configuration file (which is defined at configure time but defaults to 
-/etc/tsocks.conf) and determines if the IP address specified is local. If 
-it is not, the library redirects the connection to a SOCKS server
-specified in the configuration file. It then negotiates that connection
-with the SOCKS server and passes the connection back to the calling
-program. 
+connect() function. When a connection is attempted, it consults the
+configuration file (which is defined at configure time but defaults to
+~/.tsocks.conf and if that file cannot be accessed, to /etc/tsocks.conf)
+and determines if the IP address specified is local. If it is not, the
+library redirects the connection to a SOCKS server specified in the
+configuration file. It then negotiates that connection with the SOCKS
+server and passes the connection back to the calling program.
 
 .BR tsocks 
 is designed for use in machines which are firewalled from then
