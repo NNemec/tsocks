@@ -32,6 +32,7 @@ changelog() { cat <</changelog
   0.2 Every option in tsocks(8) and tsocks.conf now has an argument.
       Also added -lib, -c, -0, -save, and -debug options.
   0.3 Minor tweaks for code legibility.
+  0.4 Default to hardcoded library path rather then searching for library
 /changelog
 }
 
@@ -233,19 +234,7 @@ if ! [ -r "$TSOCKS_LIB" ]; then
 fi
 # Find the library.  Note, TSOCKS_LIB is *not* used by tsocks(8)
 if ! [ -r "$TSOCKS_LIB" ]; then
-  IFS_SAVE="$IFS"
-  IFS=:
-  for ELEMENT in $LD_LIBRARY_PATH; do
-    TSOCKS_LIB="${ELEMENT:-.}/libtsocks.so"
-    [ -r "$TSOCKS_LIB" ] && break
-  done
-  IFS="$IFS_SAVE"
-  [ -r "$TSOCKS_LIB" ] \
-    || TSOCKS_LIB=`locate -r '/libtsocks.so$' 2>/dev/null |head -n1`
-  if ! [ -r "$TSOCKS_LIB" ]; then
-    err "Can't find libtsocks.so; please install tsocks or use the '-lib' flag."
-    exit 1
-  fi
+  TSOCKS_LIB="@prefix@/lib/libtsocks.so"
 fi
 
 if [ "$TSOCKS_DEBUG" -gt 0 ] 2>/dev/null
