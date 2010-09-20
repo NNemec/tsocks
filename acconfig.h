@@ -43,6 +43,9 @@ allows socksified DNS */
 /* Prototype and function header for close function */
 #undef CLOSE_SIGNATURE
 
+/* Prototype and function header for getpeername function */
+#undef GETPEERNAME_SIGNATURE
+
 /* Work out which function we have for conversion from string IPs to 
 numerical ones */
 #undef HAVE_INET_ADDR

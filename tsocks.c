@@ -60,6 +60,7 @@ static int (*realconnect)(CONNECT_SIGNATURE);
 static int (*realselect)(SELECT_SIGNATURE);
 static int (*realpoll)(POLL_SIGNATURE);
 static int (*realclose)(CLOSE_SIGNATURE);
+static int (*realgetpeername)(GETPEERNAME_SIGNATURE);
 static struct parsedfile *config;
 static struct connreq *requests = NULL;
 static int suid = 0;
@@ -71,6 +72,7 @@ int connect(CONNECT_SIGNATURE);
 int select(SELECT_SIGNATURE);
 int poll(POLL_SIGNATURE);
 int close(CLOSE_SIGNATURE);
+int getpeername(GETPEERNAME_SIGNATURE);
 #ifdef USE_SOCKS_DNS
 int res_init(void);
 #endif
@@ -115,6 +117,7 @@ void tsocks_init(void) {
     realselect = dlsym(RTLD_NEXT, "select");
     realpoll = dlsym(RTLD_NEXT, "poll");
     realclose = dlsym(RTLD_NEXT, "close");
+    realgetpeername = dlsym(RTLD_NEXT, "getpeername");
 #ifdef USE_SOCKS_DNS
     realresinit = dlsym(RTLD_NEXT, "res_init");
 #endif /* USE_SOCKS_DNS */
@@ -123,6 +126,7 @@ void tsocks_init(void) {
     realconnect = dlsym(lib, "connect");
     realselect = dlsym(lib, "select");
     realpoll = dlsym(lib, "poll");
+    realgetpeername = dlsym(lib, "getpeername");
 #ifdef USE_SOCKS_DNS
     realresinit = dlsym(lib, "res_init");
 #endif /* USE_SOCKS_DNS */
@@ -347,8 +351,10 @@ int select(SELECT_SIGNATURE) {
 
     /* If we're not currently managing any requests we can just
      * leave here */
-    if (!requests)
+    if (!requests) {
+        show_msg(MSGDEBUG, "No requests waiting, calling real select\n");
 	return realselect(n, readfds, writefds, exceptfds, timeout);
+   }
 
     get_environment();
 
@@ -699,6 +705,50 @@ int close(CLOSE_SIGNATURE) {
 	kill_socks_request(conn);
     }
 
+    return rc;
+}
+
+/* If we are not done setting up the connection yet, return
+ * -1 and ENOTCONN, otherwise call getpeername
+ *
+ * This is necessary since some applications, when using non-blocking connect,
+ * (like ircII) use getpeername() to find out if they are connected already.
+ *
+ * This results in races sometimes, where the client sends data to the socket
+ * before we are done with the socks connection setup.  Another solution would
+ * be to intercept send().
+ * 
+ * This could be extended to actually set the peername to the peer the
+ * client application has requested, but not for now.
+ *
+ * PP, Sat, 27 Mar 2004 11:30:23 +0100
+ */
+int getpeername(GETPEERNAME_SIGNATURE) {
+    struct connreq *conn;
+    int rc;
+
+     if (realgetpeername == NULL) {
+         show_msg(MSGERR, "Unresolved symbol: getpeername\n");
+         return(-1);
+     }
+
+    show_msg(MSGDEBUG, "Call to getpeername for fd %d\n", __fd);
+
+
+    rc = realgetpeername(__fd, __name, __namelen);
+    if (rc == -1)
+        return rc;
+
+    /* Are we handling this connect? */
+    if ((conn = find_socks_request(__fd, 1))) {
+        /* While we are at it, we might was well try to do something useful */
+        handle_request(conn);
+
+        if (conn->state != DONE) {
+            errno = ENOTCONN;
+            return(-1);
+        }
+    }
     return rc;
 }
 
