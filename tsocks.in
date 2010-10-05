@@ -33,6 +33,7 @@ changelog() { cat <</changelog
       Also added -lib, -c, -0, -save, and -debug options.
   0.3 Minor tweaks for code legibility.
   0.4 Default to hardcoded library path rather then searching for library
+  0.5 Accept zero-sized ~/.tsocks.conf
 /changelog
 }
 
@@ -54,8 +55,7 @@ err() { echo "${0##*/}: $*" >${TSOCKS_DEBUG_FILE:-/dev/stderr}; }
 
 if [ -z "$TSOCKS_CONF_FILE" ]; then
   TSOCKS_CONF_FILE="$HOME/.tsocks.conf"
-  [ -f "$TSOCKS_CONF_FILE" -a -s "$TSOCKS_CONF_FILE" \
-    -a -r "$TSOCKS_CONF_FILE" ] || TSOCKS_CONF_FILE="/etc/tsocks.conf"
+  [ -r "$TSOCKS_CONF_FILE" ] || TSOCKS_CONF_FILE="/etc/tsocks.conf"
 fi
 
 # Other defaults, which we're leaving blank or as inherited, follow:
