@@ -34,6 +34,8 @@ changelog() { cat <</changelog
   0.3 Minor tweaks for code legibility.
   0.4 Default to hardcoded library path rather then searching for library
   0.5 Accept zero-sized ~/.tsocks.conf
+  0.6 deal gracefully with missing config file but err on existing but unreadable 
+      config file
 /changelog
 }
 
@@ -52,11 +54,6 @@ http://sourceforge.net/forum/forum.php?thread_id=1352634&forum_id=54983
 
 s='[	 ]' # match any type of space
 err() { echo "${0##*/}: $*" >${TSOCKS_DEBUG_FILE:-/dev/stderr}; }
-
-if [ -z "$TSOCKS_CONF_FILE" ]; then
-  TSOCKS_CONF_FILE="$HOME/.tsocks.conf"
-  [ -r "$TSOCKS_CONF_FILE" ] || TSOCKS_CONF_FILE="/etc/tsocks.conf"
-fi
 
 # Other defaults, which we're leaving blank or as inherited, follow:
 # TSOCKS_DEBUG, TSOCKS_DEBUG_FILE, TSOCKS_USERNAME, TSOCKS_PASSWORD
@@ -226,17 +223,6 @@ parse_args "$@"
 [ "$DO_SHIFT" -gt 0 ] 2>/dev/null && shift $DO_SHIFT
 unset TOP
 
-# Note, TSOCKS_LIB is *not* used by tsocks(8)
-# Is the library saved in the config?  (Note, this syntax requires a comment)
-if ! [ -r "$TSOCKS_LIB" ]; then
-  TSOCKS_LIB=`sed -e "/^#$s*library$s*=$s*/!d" -e s/// -e q "$TSOCKS_CONF_FILE"`
-  [ -r "$TSOCKS_LIB" ] && debug "read library file '$TSOCKS_LIB' from config"
-fi
-# Find the library.  Note, TSOCKS_LIB is *not* used by tsocks(8)
-if ! [ -r "$TSOCKS_LIB" ]; then
-  TSOCKS_LIB="@prefix@/lib/libtsocks.so"
-fi
-
 if [ "$TSOCKS_DEBUG" -gt 0 ] 2>/dev/null
   then debug() { echo "$*" >${TSOCKS_DEBUG_FILE:-/dev/stderr}; }
        debug_sed() { sed 's/^/  /' >${TSOCKS_DEBUG_FILE:-/dev/stderr}; }
@@ -250,13 +236,30 @@ if [ -n "$NO_CONF" ]; then
   debug "Unsetting default and requested configuration files for '-0' argument"
   debug "(TSOCKS_CONF_FILE is no longer set to '$TSOCKS_CONF_FILE')"
   unset CONF
-  export TSOCKS_CONF_FILE=/dev/null
+  TSOCKS_CONF_FILE=/dev/null
 elif [ -n "$CONF" ]; then
-  if [ -f "$CONF" -a -s "$CONF" -a -r "$CONF" ]
-    then TSOCKS_CONF_FILE = "$CONF"
-    else err "Can't read '$CONF', using default '$TSOCKS_CONF_FILE' instead."
-  fi
+  TSOCKS_CONF_FILE = "$CONF"
   debug "Using '$TSOCKS_CONF_FILE' for TSOCKS_CONF_FILE"
+elif [ -z "$TSOCKS_CONF_FILE" ]; then
+  TSOCKS_CONF_FILE="$HOME/.tsocks.conf"
+  [ -e "$TSOCKS_CONF_FILE" ] || TSOCKS_CONF_FILE="@sysconfdir@/tsocks.conf"
+  [ -e "$TSOCKS_CONF_FILE" ] || TSOCKS_CONF_FILE=/dev/null
+fi
+
+if [ ! -r "$TSOCKS_CONF_FILE" ]; then
+    err "Can't read config file '$TSOCKS_CONF_FILE'"
+    exit 1
+fi
+
+# Note, TSOCKS_LIB is *not* used by tsocks(8)
+# Is the library saved in the config?  (Note, this syntax requires a comment)
+if ! [ -r "$TSOCKS_LIB" ]; then
+  TSOCKS_LIB=`sed -e "/^#$s*library$s*=$s*/!d" -e s/// -e q "$TSOCKS_CONF_FILE"`
+  [ -r "$TSOCKS_LIB" ] && debug "read library file '$TSOCKS_LIB' from config"
+fi
+# Find the library.  Note, TSOCKS_LIB is *not* used by tsocks(8)
+if ! [ -r "$TSOCKS_LIB" ]; then
+  TSOCKS_LIB="@libdir@/libtsocks.so"
 fi
 
 if [ -n "$TURN_OFF" ]; then
