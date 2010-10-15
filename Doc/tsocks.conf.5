@@ -66,7 +66,7 @@ The following directives are used in the tsocks configuration file:
 .I server
 The IP address of the SOCKS server (e.g "server = 10.1.4.253"). Only one
 server may be specified per path block, or one outside a path
-block (to define the default server). Unless --disable-hostnames was 
+block (to define the default server). Unless \-\-disable\-hostnames was 
 specified to configure at compile time the server can be specified as 
 a hostname (e.g "server = socks.nec.com") 
 
@@ -118,13 +118,22 @@ local, otherwise tsocks would need a SOCKS server to reach SOCKS servers.
 .TP
 .I reaches
 This directive is only valid inside a path block. Its parameter is formed
-as IP[:startport[-endport]]/Subnet and it specifies a network (and a range
+as IP[:startport[\-endport]]/Subnet and it specifies a network (and a range
 of ports on that network) that can be accessed by the SOCKS server specified
 in this path block. For example, in a path block "reaches =
-150.0.0.0:80-1024/255.0.0.0" indicates to tsocks that the SOCKS server 
+150.0.0.0:80\-1024/255.0.0.0" indicates to tsocks that the SOCKS server 
 specified in the current path block should be used to access any IPs in the 
 range 150.0.0.0 to 150.255.255.255 when the connection request is for ports
-80-1024.
+80\-1024.
+
+.TP
+.I fallback
+This directive allows to fall back to direct connection if no default
+server present in the configuration and fallback = yes.
+If fallback = no or not specified and there is no default server, the
+tsocks gives an error message and aborts.
+This parameter protects the user against accidentally establishing
+unwanted unsockified (ie. direct) connection.
 
 .SH UTILITIES
 tsocks comes with two utilities that can be useful in creating and verifying
@@ -146,12 +155,12 @@ the configuration to the screen in a formatted, readable manner. This can be
 extremely useful in debugging problems.
 
 validateconf can read a configuration file from a location other than the 
-location specified at compile time with the -f <filename> command line 
+location specified at compile time with the \-f <filename> command line 
 option.
 
 Normally validateconf simply dumps the configuration read to the screen (in
 a nicely readable format), however it also has a useful 'test' mode. When
-passed a hostname/ip on the command line like -t <hostname/ip>, validateconf 
+passed a hostname/ip on the command line like \-t <hostname/ip>, validateconf 
 determines which of the SOCKS servers specified in the configuration file 
 would be used by tsocks to access the specified host. 
 

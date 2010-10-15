@@ -1,0 +1,33 @@
+.TH TSOCKS 1 "" "TSOCKS"
+
+.SH NAME
+.BR tsocks 
+\- Shell wrapper to simplify the use of the tsocks(8) library to 
+transparently allow an application to use a SOCKS proxy
+.SH SYNOPSIS
+.B tsocks
+.RB [options]
+.RB [--]
+.RB command
+.RB [arguments...]
+.SH DESCRIPTION
+.B tsocks
+is a wrapper between the tsocks library and the application that you
+would like to run socksified.
+.br
+.SH OPTIONS
+.IP "\fP-h\fP, \fB--help\fP"
+Shows help message
+.IP "\fB-c\fP \fIFILE\fP, \fB--conf\fP \fIFILE\fP"
+Use specified configuration file instead of /etc/tsocks.conf.
+.IP "\fB-d\fP \fIN\fP, \fB--debug\fP \fIN\fP"
+Set debug level.
+.IP "\fB-f\fP \fIFILE\fP, \fB--debug-file\fP \fIFILE\fP"
+Output debug messages to specified file.
+.IP "\fB-u\fP \fIUSERNAME\fP, \fB--username\fP \fIUSERNAME\fP"
+Set SOCKS username.
+.IP "\fB-p\fP \fIPASSWORD\fP, \fB--password\fP \fIPASSWORD\fP"
+Set SOCKS password.
+.PP
+.SH AUTHOR
+Michael Hwang <michael.a.hwang@gmail.com>
