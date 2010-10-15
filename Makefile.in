@@ -2,6 +2,7 @@
 
 CC=@CC@
 prefix=@prefix@
+datarootdir=@datarootdir@
 exec_prefix = @exec_prefix@
 libexecdir = @libexecdir@
 sysconfdir = @sysconfdir@
